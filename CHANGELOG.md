@@ -4,6 +4,22 @@ Formato basado en *Keep a Changelog*. Fechas en formato AAAA-MM-DD.
 
 ## [0.1.0-dev] — 2026-10-14
 
+### Fase 4: referencias, historial y copias de seguridad
+
+#### Añadido
+- Exportación a BibTeX, RIS, EndNote etiquetado (.enw), EndNote XML, CSV (Excel, con BOM UTF-8) y CSL-JSON, con claves de cita únicas y separación correcta de apellidos (incluidas partículas como «de la», «van»).
+- Importación de BibTeX (llaves anidadas, comillas, acentos LaTeX, @comment/@string), RIS (líneas de continuación, DOI en URL) y EndNote .enw, con avisos y sin duplicados.
+- Biblioteca: botones Importar y «Exportar esta vista»; proyectos: exportar su bibliografía.
+- Configuración: copia de seguridad completa y restauración atómica entre web y Windows.
+- Buscador: borrar entradas del historial.
+- Windows: plugin de diálogo de Tauri y comando `save_text_file` con lista de extensiones permitidas y escritura atómica.
+
+#### Corregido
+- BibTeX: las llaves escapadas (`\{ \}`) se perdían al importar.
+- EndNote: las palabras clave se unían en una sola al exportar.
+- La fuente «import» se mostraba sin traducir.
+
+
 ### Fase 3: búsqueda científica real (OpenAlex)
 
 #### Añadido

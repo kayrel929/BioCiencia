@@ -375,7 +375,7 @@ export function Search() {
         {history.data && history.data.length > 0 ? (
           <table className="bc-table">
             <thead>
-              <tr><th>Consulta</th><th>Resultados</th><th>Fecha</th></tr>
+              <tr><th>Consulta</th><th>Resultados</th><th>Fecha</th><th><span className="bc-sr">Acciones</span></th></tr>
             </thead>
             <tbody>
               {history.data.map((s) => (
@@ -383,6 +383,19 @@ export function Search() {
                   <td><Link to={`/buscar?s=${s.id}`}>{s.query || "(sin texto)"}</Link></td>
                   <td>{s.error ? <span className="bc-badge bc-badge-warn">{s.error.slice(0, 60)}</span> : `${s.resultCount}${s.totalHits ? ` de ${s.totalHits.toLocaleString("es")}` : ""}`}</td>
                   <td>{new Date(s.createdAt).toLocaleString()}</td>
+                  <td>
+                    <button
+                      className="bc-btn bc-btn-ghost bc-btn-sm"
+                      aria-label={`Borrar del historial: ${s.query}`}
+                      onClick={async () => {
+                        await repo.deleteSearch(s.id);
+                        if (savedId === s.id) setParams({});
+                        refresh();
+                      }}
+                    >
+                      Borrar
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

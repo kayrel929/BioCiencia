@@ -4,6 +4,22 @@ import { OpenAlexClient } from "@biociencia/sources";
 
 export type Platform = "desktop" | "web";
 
+/** Guarda un archivo generado por la app. Devuelve false si el usuario canceló. */
+export type SaveFile = (fileName: string, content: string, mime: string) => Promise<boolean>;
+
+/** Implementación web: descarga del navegador. */
+export const browserSaveFile: SaveFile = async (fileName, content, mime) => {
+  const url = URL.createObjectURL(new Blob([content], { type: `${mime};charset=utf-8` }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  return true;
+};
+
 interface AppState {
   repo: BioRepo;
   platform: Platform;
@@ -16,11 +32,12 @@ interface AppState {
   setTheme: (t: "light" | "dark") => void;
   /** Cliente de OpenAlex (usa fetch del navegador o de la WebView de Windows) */
   openalex: OpenAlexClient;
+  saveFile: SaveFile;
 }
 
 const Ctx = createContext<AppState | null>(null);
 
-export function AppProvider({ repo, platform, children }: { repo: BioRepo; platform: Platform; children: ReactNode }) {
+export function AppProvider({ repo, platform, saveFile = browserSaveFile, children }: { repo: BioRepo; platform: Platform; saveFile?: SaveFile; children: ReactNode }) {
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [version, setVersion] = useState(0);
   const [theme, setThemeState] = useState<"light" | "dark">(
@@ -50,7 +67,7 @@ export function AppProvider({ repo, platform, children }: { repo: BioRepo; platf
   );
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
 
-  return <Ctx.Provider value={{ repo, platform, identity, version, refresh, setIdentity, theme, setTheme, openalex }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ repo, platform, identity, version, refresh, setIdentity, theme, setTheme, openalex, saveFile }}>{children}</Ctx.Provider>;
 }
 
 export function useApp(): AppState {

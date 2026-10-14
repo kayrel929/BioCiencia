@@ -1,2 +1,2 @@
 export { BioCienciaApp, StartupError } from "./App.tsx";
-export type { Platform } from "./context.tsx";
+export type { Platform, SaveFile } from "./context.tsx";

@@ -8,7 +8,7 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 | 2 | Estructura, interfaz, navegación y base de datos local | ✅ (🔎 abrir en Windows) |
 | 3 | Búsqueda científica real con OpenAlex | ✅ (🔎 `npm run test:live` en su PC) |
 | 3b | Más fuentes: Crossref, PubMed, Europe PMC, arXiv, DOAJ + unificación | ⬜ |
-| 4 | Historial completo, exportación BibTeX/RIS/CSV, importación, copias de seguridad | ⬜ |
+| 4 | Exportación e importación (BibTeX, RIS, EndNote, CSV, CSL-JSON), historial, copias de seguridad | ✅ (🔎 abrir los archivos en Zotero/EndNote) |
 | 5 | Sincronización entre dos computadoras (eventos firmados + Syncthing) | ⬜ |
 | 6 | Proyectos compartidos, invitaciones y permisos sincronizados | ⬜ |
 | 7 | IA (Ollama local / API con permiso) y análisis de PDF | ⬜ |
@@ -40,10 +40,20 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 - ✅ Pruebas: 21 nuevas (análisis de respuestas reales grabadas, consultas, errores, integración con SQLite) + 2 de interfaz.
 - 🔎 Prueba en vivo contra OpenAlex: `npm run test:live` en su PC (la nube de desarrollo no tiene acceso).
 
+## Fase 4 — detalle
+
+- ✅ Exportar en 6 formatos: BibTeX, RIS, EndNote etiquetado (.enw), EndNote XML, CSV para Excel (con acentos) y CSL-JSON; desde la biblioteca (vista filtrada) o un proyecto.
+- ✅ Importar BibTeX, RIS y EndNote (.enw) con vista previa, avisos (sin título, DOI no válido) y sin duplicar; opción de añadir a colección o proyecto.
+- ✅ Copia de seguridad completa (.json) y restauración atómica: si algo falla no se toca nada; sirve para pasar datos entre web y Windows.
+- ✅ Borrar búsquedas del historial.
+- ✅ Windows: diálogo nativo «Guardar como» y escritura limitada a extensiones permitidas.
+- ✅ Errores encontrados por las pruebas de ida y vuelta y corregidos: llaves escapadas en BibTeX y palabras clave en EndNote.
+- ✅ Pruebas: 25 nuevas (Vitest) + 1 de interfaz que descarga y revisa los 6 formatos y restaura en otro navegador.
+- 🔎 Abrir los archivos exportados en Zotero y EndNote en su PC.
+
 ## Pendientes conocidos
 
 - Licencia del proyecto por definir con el grupo.
-- Exportación de referencias: se implementa en la Fase 4 (requisito de la v0.1).
 - Búsqueda en vivo verificada solo desde el navegador del usuario; falta `npm run test:live` en su PC.
 - Clave de API de OpenAlex (para superar el cupo gratuito de 0,10 USD/día): pendiente, se guardará en el Administrador de credenciales de Windows.
 - Sincronización básica entre dos PC: Fase 5 (requisito de la v0.1).

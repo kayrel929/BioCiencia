@@ -4,6 +4,7 @@ import { useApp, useAsync } from "../context.tsx";
 import { Icon } from "../components/Icon.tsx";
 import { Dialog } from "../components/Pending.tsx";
 import { WorkItem } from "../components/WorkItem.tsx";
+import { ExportButton } from "../components/RefsIO.tsx";
 
 const ROLE_LABEL = { admin: "Administrador", editor: "Investigador editor", reader: "Investigador lector" } as const;
 
@@ -190,7 +191,10 @@ export function ProjectDetail() {
       </div>
 
       <div className="bc-card" style={{ marginTop: 16 }}>
-        <h2>Bibliografía del proyecto ({works.data?.length ?? 0})</h2>
+        <div className="bc-row" style={{ justifyContent: "space-between" }}>
+          <h2 style={{ margin: 0 }}>Bibliografía del proyecto ({works.data?.length ?? 0})</h2>
+          <ExportButton baseName={project.data.name} getWorks={async () => (await repo.listLibrary({ projectId: id, limit: 100000 })).map((e) => e.work)} />
+        </div>
         {works.data && works.data.length === 0 ? (
           <p className="bc-sub">Añada publicaciones desde la Biblioteca con «Etiquetas, notas y proyecto».</p>
         ) : null}

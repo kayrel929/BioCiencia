@@ -164,3 +164,4 @@ code, .mono { font-family: var(--bc-mono); font-size: 0.86em; }
 .bc-suggest button:hover, .bc-suggest button:focus { background: var(--bc-surface-2); outline: none; }
 .bc-suggest span { font-size: 0.82rem; color: var(--bc-text-2); }
 .bc-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 4px 12px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--bc-border); }
+.bc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

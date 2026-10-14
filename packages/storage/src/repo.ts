@@ -148,6 +148,22 @@ export function toFtsQuery(text: string): string | null {
 
 const now = () => new Date().toISOString();
 
+export const BACKUP_FORMAT = "biociencia-backup-1";
+/** Tablas en orden de dependencias (las referenciadas primero). */
+export const BACKUP_TABLES = [
+  "identity", "devices", "settings", "works", "work_ids", "sources_log", "searches", "search_results",
+  "library_items", "tags", "projects", "collections", "collection_items", "project_members", "project_works",
+  "notes", "files", "events", "sync_peers", "sync_log",
+] as const;
+
+export interface Backup {
+  format: typeof BACKUP_FORMAT;
+  schemaVersion: number;
+  createdAt: string;
+  app: "BioCiencia";
+  tables: Record<string, Record<string, unknown>[]>;
+}
+
 /**
  * Acceso a los datos locales de BioCiencia. Funciona igual en Windows y web
  * porque solo depende de la interfaz SqlDriver.
@@ -577,6 +593,84 @@ export class BioRepo {
   async deleteProject(projectId: string): Promise<void> {
     await this.requireRole(projectId, ["admin"]);
     await this.db.batch([{ sql: "UPDATE projects SET deleted = 1, updated_at = ? WHERE id = ?", params: [now(), projectId] }]);
+  }
+
+  // ---------------- Importación ----------------
+
+  /**
+   * Agrega publicaciones importadas (BibTeX, RIS, EndNote) a la biblioteca sin duplicarlas.
+   * Devuelve cuántas eran nuevas y cuántas ya existían (se completan sus datos).
+   */
+  async importWorks(works: Work[], opts: { collectionId?: string; projectId?: string } = {}): Promise<{ created: number; merged: number; ids: string[] }> {
+    let created = 0;
+    let merged = 0;
+    const ids: string[] = [];
+    for (const w of works) {
+      const r = await this.upsertWork(w);
+      if (r.created) created++;
+      else merged++;
+      ids.push(r.id);
+      await this.addToLibrary(r.id);
+      if (opts.collectionId) await this.addToCollection(opts.collectionId, r.id);
+      if (opts.projectId) await this.addWorkToProject(opts.projectId, r.id);
+    }
+    return { created, merged, ids };
+  }
+
+  /** Publicaciones por id, en el orden pedido (para exportar una selección). */
+  async worksByIds(ids: string[]): Promise<Work[]> {
+    const out: Work[] = [];
+    for (const id of ids) {
+      const w = await this.getWork(id);
+      if (w) out.push(w);
+    }
+    return out;
+  }
+
+  // ---------------- Copias de seguridad ----------------
+
+  /** Copia completa de los datos locales en un objeto JSON portable (Windows ↔ web). */
+  async exportBackup(): Promise<Backup> {
+    const tables: Record<string, Record<string, unknown>[]> = {};
+    for (const t of BACKUP_TABLES) tables[t] = await this.db.all(`SELECT * FROM ${t}`);
+    const v = await this.db.all<{ v: number }>("SELECT MAX(version) AS v FROM schema_migrations");
+    return { format: BACKUP_FORMAT, schemaVersion: Number(v[0]?.v ?? 0), createdAt: now(), app: "BioCiencia", tables };
+  }
+
+  /**
+   * Restaura una copia reemplazando TODOS los datos locales, en una sola transacción:
+   * si algo falla, los datos actuales quedan intactos.
+   */
+  async restoreBackup(input: unknown): Promise<{ rows: number }> {
+    const b = input as Partial<Backup> | null;
+    if (!b || b.format !== BACKUP_FORMAT || typeof b.tables !== "object" || !b.tables) throw new Error("El archivo no es una copia de seguridad de BioCiencia.");
+    const current = await this.db.all<{ v: number }>("SELECT MAX(version) AS v FROM schema_migrations");
+    if (Number(b.schemaVersion) > Number(current[0]?.v ?? 0)) throw new Error("La copia fue hecha con una versión más nueva de BioCiencia. Actualice la aplicación antes de restaurar.");
+    const stmts: Statement[] = [];
+    for (const t of [...BACKUP_TABLES].reverse()) stmts.push({ sql: `DELETE FROM ${t}` });
+    stmts.push({ sql: "DELETE FROM works_fts" });
+    let rows = 0;
+    for (const t of BACKUP_TABLES) {
+      const cols = new Set((await this.db.all<{ name: string }>(`PRAGMA table_info(${t})`)).map((c) => c.name));
+      for (const row of b.tables[t] ?? []) {
+        const keys = Object.keys(row).filter((k) => cols.has(k));
+        if (keys.length === 0) continue;
+        stmts.push({
+          sql: `INSERT INTO ${t} (${keys.join(", ")}) VALUES (${keys.map(() => "?").join(", ")})`,
+          params: keys.map((k) => {
+            const v = (row as Record<string, unknown>)[k];
+            return v === null || v === undefined ? null : typeof v === "number" ? v : String(v);
+          }),
+        });
+        rows++;
+      }
+    }
+    for (const w of (b.tables.works ?? []) as unknown as WorkRow[]) {
+      if (!w?.id) continue;
+      stmts.push(...ftsStatements(w.id, rowToWork(w)));
+    }
+    await this.db.batch(stmts);
+    return { rows };
   }
 
   // ---------------- Notas ----------------

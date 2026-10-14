@@ -9,7 +9,7 @@ P2P entre computadoras, asistente de IA con referencias verificables, editor de
 manuscritos y estadística. Funciona en **Windows** (Tauri) y en el **navegador** (PWA),
 con el mismo código.
 
-> Estado: **v0.1.0 en desarrollo — Fases 2 y 3 completadas.** Ver [ROADMAP.md](ROADMAP.md).
+> Estado: **v0.1.0 en desarrollo — Fases 2, 3 y 4 completadas.** Ver [ROADMAP.md](ROADMAP.md).
 
 ## Qué funciona hoy
 
@@ -23,9 +23,11 @@ con el mismo código.
 - Interfaz propia con 11 pantallas, modo claro/oscuro y diseño adaptable a teléfono.
 - Búsqueda científica real en OpenAlex: preguntas, palabras clave, título, autor (sin homónimos), revista o DOI; filtros por año, tipo, área, idioma, citas y acceso abierto; orden por relevancia, citas o fecha.
 - Historial de búsquedas que se puede abrir sin internet ni costo; guardar resultados en la biblioteca o en un proyecto.
+- Exportar referencias a BibTeX, RIS, EndNote (.enw y XML), CSV y CSL-JSON; importar desde Zotero, Mendeley, EndNote o JabRef sin duplicar.
+- Copias de seguridad completas y restauración (también para pasar datos entre web y Windows).
 
 **Todavía no** (pantallas marcadas «Pendiente · Fase N»): otras fuentes además de OpenAlex
-(Fase 3b), exportación BibTeX/RIS y copias de seguridad (Fase 4), sincronización (Fase 5),
+(Fase 3b), sincronización (Fase 5),
 invitaciones (Fase 6), IA y PDF (Fase 7), editor (Fase 8), estadística (Fase 9).
 
 ## Requisitos
@@ -68,10 +70,10 @@ docs/              Arquitectura, análisis de referencia, guías
 
 | Comando | Qué prueba |
 | --- | --- |
-| `npm test` | Núcleo, base de datos y cliente OpenAlex con respuestas reales grabadas (44 pruebas) |
+| `npm test` | Núcleo, base de datos y cliente OpenAlex con respuestas reales grabadas (69 pruebas) |
 | `npm run test:live` | Búsqueda real en OpenAlex (requiere internet; ~0,003 USD del cupo gratuito) |
 | `cargo test --manifest-path apps/desktop/src-tauri/db/Cargo.toml` | SQLite nativo de Rust, FTS5, transacciones, copia (4 pruebas) |
-| `npx playwright test` | Interfaz web completa en Chromium (4 pruebas) |
+| `npx playwright test` | Interfaz web completa en Chromium (5 pruebas) |
 | `npm run typecheck` | Tipos de TypeScript |
 
 ## Uso de OpenAlex y costos

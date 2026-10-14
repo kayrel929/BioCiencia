@@ -17,6 +17,7 @@ const SOURCE_LABEL: Record<string, string> = {
   arxiv: "arXiv",
   doaj: "DOAJ",
   manual: "Ingreso manual",
+  import: "Importado",
 };
 
 /** Ficha de una publicación: datos bibliográficos, enlaces y acciones. */

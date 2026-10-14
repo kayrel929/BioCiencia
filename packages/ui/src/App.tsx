@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { HashRouter, NavLink, Route, Routes } from "react-router-dom";
 import type { BioRepo } from "@biociencia/storage";
-import { AppProvider, useApp, type Platform } from "./context.tsx";
+import { AppProvider, useApp, type Platform, type SaveFile } from "./context.tsx";
 import { Logo } from "./components/Logo.tsx";
 import { Icon } from "./components/Icon.tsx";
 import { Welcome } from "./screens/Welcome.tsx";
@@ -106,9 +106,9 @@ function Shell() {
   );
 }
 
-export function BioCienciaApp({ repo, platform }: { repo: BioRepo; platform: Platform }) {
+export function BioCienciaApp({ repo, platform, saveFile }: { repo: BioRepo; platform: Platform; saveFile?: SaveFile }) {
   return (
-    <AppProvider repo={repo} platform={platform}>
+    <AppProvider repo={repo} platform={platform} saveFile={saveFile}>
       <HashRouter>
         <Shell />
       </HashRouter>

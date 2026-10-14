@@ -3,6 +3,7 @@ import { useApp, useAsync } from "../context.tsx";
 import { Icon } from "../components/Icon.tsx";
 import { WorkItem } from "../components/WorkItem.tsx";
 import { ManualWorkForm } from "../components/ManualWorkForm.tsx";
+import { ExportButton, ImportDialog } from "../components/RefsIO.tsx";
 import { Dialog } from "../components/Pending.tsx";
 import type { LibraryEntry } from "@biociencia/storage";
 
@@ -14,6 +15,7 @@ export function Library() {
   const [tag, setTag] = useState("");
   const [collectionId, setCollectionId] = useState("");
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [newCollection, setNewCollection] = useState<string | null>(null);
   const [editing, setEditing] = useState<LibraryEntry | null>(null);
 
@@ -41,6 +43,7 @@ export function Library() {
           <button className="bc-btn" onClick={() => setNewCollection("")}>
             <Icon name="plus" /> Colección
           </button>
+          <button className="bc-btn" onClick={() => setImporting(true)}>Importar</button>
           <button className="bc-btn bc-btn-primary" onClick={() => setAdding(true)}>
             <Icon name="plus" /> Referencia manual
           </button>
@@ -73,9 +76,14 @@ export function Library() {
             ))}
           </select>
         </form>
-        <p className="bc-sub" style={{ fontSize: "0.82rem", marginTop: 8, marginBottom: 0 }}>
-          Exportar a BibTeX, RIS y CSV llega en la Fase 4.
-        </p>
+        <div className="bc-row" style={{ marginTop: 10, justifyContent: "space-between" }}>
+          <span className="bc-sub" style={{ fontSize: "0.85rem" }}>{entries.data ? `${entries.data.length} publicación(es) en esta vista` : ""}</span>
+          <ExportButton
+            baseName={query || tag || "biblioteca"}
+            label="Exportar esta vista"
+            getWorks={async () => (await repo.listLibrary({ text: query || undefined, favorite, tag: tag || undefined, collectionId: collectionId || undefined, limit: 100000 })).map((e) => e.work)}
+          />
+        </div>
       </div>
 
       <div className="bc-card">
@@ -115,6 +123,7 @@ export function Library() {
       </div>
 
       {adding ? <ManualWorkForm onClose={() => setAdding(false)} /> : null}
+      {importing ? <ImportDialog onClose={() => setImporting(false)} /> : null}
 
       {newCollection !== null ? (
         <Dialog title="Nueva colección" onClose={() => setNewCollection(null)}>

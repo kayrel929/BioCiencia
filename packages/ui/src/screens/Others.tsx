@@ -134,6 +134,7 @@ export function Settings() {
           {msg ? <div className="bc-alert" style={{ marginTop: 10 }}>{msg}</div> : null}
         </form>
         <OpenAlexSettings />
+        <BackupCard />
         <div className="bc-card">
           <h2>Apariencia</h2>
           <div className="bc-row">
@@ -159,7 +160,6 @@ export function Settings() {
               Este navegador no ofrece almacenamiento persistente (OPFS). Use un navegador actualizado o la versión Windows.
             </div>
           ) : null}
-          <p className="bc-sub" style={{ fontSize: "0.82rem", marginTop: 8 }}>Copias de seguridad y restauración: Fase 4.</p>
         </div>
         <div className="bc-card">
           <h2>Acerca de</h2>
@@ -200,5 +200,68 @@ function OpenAlexSettings() {
       <button className="bc-btn bc-btn-primary" type="submit">Guardar</button>
       {msg ? <div className="bc-alert" style={{ marginTop: 10 }}>{msg}</div> : null}
     </form>
+  );
+}
+
+/** Copia de seguridad completa y restauración (funciona igual en Windows y web). */
+function BackupCard() {
+  const { repo, saveFile, setIdentity, refresh } = useApp();
+  const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="bc-card">
+      <h2>Copias de seguridad</h2>
+      <p className="bc-sub" style={{ fontSize: "0.85rem" }}>
+        Guarda toda su información (biblioteca, proyectos, notas, historial) en un archivo .json. Sirve también para pasar sus datos de la versión web a la de Windows o al revés.
+      </p>
+      <div className="bc-row">
+        <button
+          className="bc-btn bc-btn-primary"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              const b = await repo.exportBackup();
+              const ok = await saveFile(`biociencia-copia-${b.createdAt.slice(0, 10)}.json`, JSON.stringify(b), "application/json");
+              if (ok) setMsg({ text: "Copia de seguridad guardada. Consérvela en otro disco o en la nube." });
+            } catch (e) {
+              setMsg({ text: `No se pudo crear la copia: ${e instanceof Error ? e.message : String(e)}`, error: true });
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Crear copia de seguridad
+        </button>
+        <label className="bc-btn" htmlFor="bk-file" style={{ cursor: "pointer" }}>Restaurar desde archivo…</label>
+        <input
+          id="bk-file"
+          type="file"
+          accept=".json,application/json"
+          aria-label="Archivo de copia de seguridad"
+          style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            if (!window.confirm("Restaurar REEMPLAZA todos los datos actuales por los de la copia. Se recomienda crear antes una copia de lo actual. ¿Continuar?")) return;
+            setBusy(true);
+            try {
+              const data = JSON.parse(await file.text());
+              const r = await repo.restoreBackup(data);
+              const me = await repo.getIdentity();
+              if (me) setIdentity(me);
+              refresh();
+              setMsg({ text: `Copia restaurada (${r.rows} registros).` });
+            } catch (err) {
+              setMsg({ text: `No se restauró nada: ${err instanceof Error ? err.message : String(err)}`, error: true });
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      </div>
+      {msg ? <div className={`bc-alert ${msg.error ? "bc-alert-error" : ""}`} role="status" style={{ marginTop: 10 }}>{msg.text}</div> : null}
+    </div>
   );
 }
