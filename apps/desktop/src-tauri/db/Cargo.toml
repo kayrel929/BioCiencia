@@ -1,0 +1,11 @@
+[package]
+name = "biociencia-db"
+version = "0.1.0"
+edition = "2021"
+description = "Acceso a SQLite para BioCiencia (sin dependencias de Tauri, para poder probarlo aparte)"
+
+[dependencies]
+# "bundled" compila SQLite dentro del ejecutable (incluye FTS5): no hay que instalar nada aparte
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

@@ -1,0 +1,22 @@
+{
+  "name": "@biociencia/web",
+  "version": "0.1.0-dev",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173"
+  },
+  "dependencies": {
+    "@biociencia/storage": "*",
+    "@biociencia/ui": "*",
+    "@sqlite.org/sqlite-wasm": "^3.50.4-build1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^7.1.0"
+  }
+}

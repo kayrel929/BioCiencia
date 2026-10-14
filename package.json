@@ -16,6 +16,7 @@
     "build:desktop": "npm run tauri -w @biociencia/desktop -- build"
   },
   "devDependencies": {
+    "@playwright/test": "1.56",
     "@types/node": "^22.10.0",
     "typescript": "^5.6.3",
     "vitest": "^3.2.4"
