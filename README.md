@@ -9,7 +9,7 @@ P2P entre computadoras, asistente de IA con referencias verificables, editor de
 manuscritos y estadística. Funciona en **Windows** (Tauri) y en el **navegador** (PWA),
 con el mismo código.
 
-> Estado: **v0.1.0 en desarrollo — Fase 2 completada.** Ver [ROADMAP.md](ROADMAP.md).
+> Estado: **v0.1.0 en desarrollo — Fases 2 y 3 completadas.** Ver [ROADMAP.md](ROADMAP.md).
 
 ## Qué funciona hoy
 
@@ -21,10 +21,11 @@ con el mismo código.
 - Proyectos: nombre, descripción, objetivos, participantes con rol, notas y bibliografía.
 - Permisos: solo los miembros ven un proyecto; los lectores no pueden editar.
 - Interfaz propia con 11 pantallas, modo claro/oscuro y diseño adaptable a teléfono.
-- Historial de búsquedas (se llenará con la búsqueda en línea de la Fase 3).
+- Búsqueda científica real en OpenAlex: preguntas, palabras clave, título, autor (sin homónimos), revista o DOI; filtros por año, tipo, área, idioma, citas y acceso abierto; orden por relevancia, citas o fecha.
+- Historial de búsquedas que se puede abrir sin internet ni costo; guardar resultados en la biblioteca o en un proyecto.
 
-**Todavía no** (pantallas marcadas «Pendiente · Fase N»): búsqueda en línea en OpenAlex
-(Fase 3), exportación BibTeX/RIS y copias de seguridad (Fase 4), sincronización (Fase 5),
+**Todavía no** (pantallas marcadas «Pendiente · Fase N»): otras fuentes además de OpenAlex
+(Fase 3b), exportación BibTeX/RIS y copias de seguridad (Fase 4), sincronización (Fase 5),
 invitaciones (Fase 6), IA y PDF (Fase 7), editor (Fase 8), estadística (Fase 9).
 
 ## Requisitos
@@ -53,6 +54,7 @@ Instalador de Windows: ver [docs/INSTALACION-WINDOWS.md](docs/INSTALACION-WINDOW
 
 ```
 packages/core      Identificadores, DOI, duplicados, reloj HLC (TypeScript)
+packages/sources   Clientes de fuentes científicas (OpenAlex)
 packages/storage   Esquema SQL, migraciones y repositorio (mismo SQL en Windows y web)
 packages/ui        Interfaz React (pantallas, componentes, estilos)
 apps/web           Versión web/PWA: SQLite WebAssembly en OPFS
@@ -66,10 +68,19 @@ docs/              Arquitectura, análisis de referencia, guías
 
 | Comando | Qué prueba |
 | --- | --- |
-| `npm test` | Núcleo y base de datos con SQLite real (23 pruebas) |
+| `npm test` | Núcleo, base de datos y cliente OpenAlex con respuestas reales grabadas (44 pruebas) |
+| `npm run test:live` | Búsqueda real en OpenAlex (requiere internet; ~0,003 USD del cupo gratuito) |
 | `cargo test --manifest-path apps/desktop/src-tauri/db/Cargo.toml` | SQLite nativo de Rust, FTS5, transacciones, copia (4 pruebas) |
-| `npx playwright test` | Interfaz web completa en Chromium (2 pruebas) |
+| `npx playwright test` | Interfaz web completa en Chromium (4 pruebas) |
 | `npm run typecheck` | Tipos de TypeScript |
+
+## Uso de OpenAlex y costos
+
+OpenAlex cobra por uso: cada búsqueda cuesta 0,001 USD de un cupo gratuito diario de 0,10 USD
+(unas 100 búsquedas por día y por conexión); buscar por DOI y el autocompletado no consumen cupo.
+BioCiencia muestra el costo y el saldo en cada búsqueda, no repite una consulta idéntica en
+10 minutos y guarda todo para consultarlo sin internet. Puede indicar su correo en
+Configuración, como recomienda OpenAlex.
 
 ## Dónde se guardan los datos
 

@@ -281,11 +281,11 @@ export class BioRepo {
     results: Work[];
     totalHits?: number | null;
     error?: string | null;
-  }): Promise<{ searchId: string; workIds: string[] }> {
-    const workIds: string[] = [];
-    for (const w of input.results) workIds.push((await this.upsertWork(w)).id);
+  }): Promise<{ searchId: string; ids: string[]; workIds: string[] }> {
+    const ids: string[] = [];
+    for (const w of input.results) ids.push((await this.upsertWork(w)).id);
     const searchId = ulid();
-    const unique = [...new Set(workIds)];
+    const unique = [...new Set(ids)];
     await this.db.batch([
       {
         sql: "INSERT INTO searches (id, query, filters_json, source, total_hits, result_count, error, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -293,7 +293,31 @@ export class BioRepo {
       },
       ...unique.map((wid, i) => ({ sql: "INSERT INTO search_results (search_id, work_id, rank) VALUES (?, ?, ?)", params: [searchId, wid, i + 1] })),
     ]);
-    return { searchId, workIds: unique };
+    return { searchId, ids, workIds: unique };
+  }
+
+  /** Añade a una búsqueda guardada los resultados de las páginas siguientes. */
+  async appendSearchResults(searchId: string, results: Work[]): Promise<string[]> {
+    const ids: string[] = [];
+    for (const w of results) ids.push((await this.upsertWork(w)).id);
+    const r = await this.db.all<{ n: number }>("SELECT COALESCE(MAX(rank), 0) AS n FROM search_results WHERE search_id = ?", [searchId]);
+    const start = Number(r[0]?.n ?? 0);
+    const unique = [...new Set(ids)];
+    await this.db.batch([
+      ...unique.map((wid, i) => ({ sql: "INSERT OR IGNORE INTO search_results (search_id, work_id, rank) VALUES (?, ?, ?)", params: [searchId, wid, start + i + 1] })),
+      { sql: "UPDATE searches SET result_count = (SELECT COUNT(*) FROM search_results WHERE search_id = ?) WHERE id = ?", params: [searchId, searchId] },
+    ]);
+    return ids;
+  }
+
+  /** Ids locales de las publicaciones que ya están en la biblioteca (para marcar resultados). */
+  async libraryMembership(workIds: string[]): Promise<Set<string>> {
+    if (workIds.length === 0) return new Set();
+    const r = await this.db.all<{ work_id: string }>(
+      `SELECT work_id FROM library_items WHERE deleted = 0 AND work_id IN (${workIds.map(() => "?").join(",")})`,
+      workIds,
+    );
+    return new Set(r.map((x) => x.work_id));
   }
 
   async listSearches(limit = 50): Promise<SearchRecord[]> {

@@ -9,6 +9,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@biociencia/sources": "*",
     "@biociencia/storage": "*",
     "@biociencia/ui": "*",
     "@tauri-apps/api": "^2.5.0",

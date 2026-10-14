@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Work } from "@biociencia/core";
+import { WORK_TYPES } from "@biociencia/sources";
 
 export function formatAuthors(w: Work, max = 4): string {
   const names = w.authors.map((a) => a.name);
@@ -39,7 +40,7 @@ export function WorkItem({ work, actions, extra }: { work: Work; actions?: React
         )}
         {work.isOpenAccess ? <span className="bc-badge bc-badge-green">Acceso abierto</span> : null}
         {typeof work.citedByCount === "number" ? <span className="bc-badge">{work.citedByCount} citas</span> : null}
-        {work.type ? <span className="bc-badge">{work.type}</span> : null}
+        {work.type ? <span className="bc-badge">{WORK_TYPES[work.type] ?? work.type}</span> : null}
         <span className="bc-badge" title={`Datos obtenidos el ${new Date(work.fetchedAt).toLocaleString()}`}>
           Fuente: {SOURCE_LABEL[work.source] ?? work.source}
         </span>

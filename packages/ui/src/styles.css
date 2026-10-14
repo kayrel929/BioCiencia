@@ -156,3 +156,11 @@ code, .mono { font-family: var(--bc-mono); font-size: 0.86em; }
 
 /* En modo oscuro el azul es más claro: texto oscuro para mantener el contraste */
 :root[data-theme="dark"] .bc-btn-primary { color: #0b1a2a; }
+
+/* ---------- Buscador (Fase 3) ---------- */
+.bc-chip-on { background: var(--bc-primary-soft); border-color: var(--bc-primary); color: var(--bc-primary-strong); font-weight: 600; }
+.bc-suggest { list-style: none; margin: 8px 0 0; padding: 4px; border: 1px solid var(--bc-border); border-radius: var(--bc-radius-sm); background: var(--bc-surface); max-height: 280px; overflow: auto; }
+.bc-suggest button { display: flex; flex-direction: column; align-items: flex-start; width: 100%; text-align: left; border: 0; background: transparent; color: var(--bc-text); padding: 8px 10px; border-radius: var(--bc-radius-sm); cursor: pointer; font: inherit; }
+.bc-suggest button:hover, .bc-suggest button:focus { background: var(--bc-surface-2); outline: none; }
+.bc-suggest span { font-size: 0.82rem; color: var(--bc-text-2); }
+.bc-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 4px 12px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--bc-border); }

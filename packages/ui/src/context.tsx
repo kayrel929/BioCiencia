@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { BioRepo, Identity } from "@biociencia/storage";
+import { OpenAlexClient } from "@biociencia/sources";
 
 export type Platform = "desktop" | "web";
 
@@ -13,6 +14,8 @@ interface AppState {
   setIdentity: (i: Identity) => void;
   theme: "light" | "dark";
   setTheme: (t: "light" | "dark") => void;
+  /** Cliente de OpenAlex (usa fetch del navegador o de la WebView de Windows) */
+  openalex: OpenAlexClient;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -24,12 +27,15 @@ export function AppProvider({ repo, platform, children }: { repo: BioRepo; platf
     typeof matchMedia !== "undefined" && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
   );
 
+  const openalex = useMemo(() => new OpenAlexClient((url, init) => fetch(url, init)), []);
+
   useEffect(() => {
     void repo.getIdentity().then(setIdentity);
+    void repo.getSetting("openalex_mailto").then((m) => openalex.setMailto(m || null));
     void repo.getSetting("theme").then((t) => {
       if (t === "light" || t === "dark") setThemeState(t);
     });
-  }, [repo]);
+  }, [repo, openalex]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -44,7 +50,7 @@ export function AppProvider({ repo, platform, children }: { repo: BioRepo; platf
   );
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
 
-  return <Ctx.Provider value={{ repo, platform, identity, version, refresh, setIdentity, theme, setTheme }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ repo, platform, identity, version, refresh, setIdentity, theme, setTheme, openalex }}>{children}</Ctx.Provider>;
 }
 
 export function useApp(): AppState {

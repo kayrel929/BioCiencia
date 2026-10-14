@@ -133,6 +133,7 @@ export function Settings() {
           <button className="bc-btn bc-btn-primary" style={{ marginTop: 12 }} type="submit">Guardar</button>
           {msg ? <div className="bc-alert" style={{ marginTop: 10 }}>{msg}</div> : null}
         </form>
+        <OpenAlexSettings />
         <div className="bc-card">
           <h2>Apariencia</h2>
           <div className="bc-row">
@@ -167,5 +168,37 @@ export function Settings() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Correo de contacto que OpenAlex pide para identificar a quién consulta. */
+function OpenAlexSettings() {
+  const { repo, openalex } = useApp();
+  const current = useAsync(() => repo.getSetting("openalex_mailto"), []);
+  const [mail, setMail] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const value = mail ?? current.data ?? "";
+  return (
+    <form
+      className="bc-card"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const v = value.trim();
+        if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return setMsg("El correo no es válido.");
+        await repo.setSetting("openalex_mailto", v);
+        openalex.setMailto(v || null);
+        setMsg(v ? "Correo guardado." : "Correo eliminado.");
+      }}
+    >
+      <h2>Búsqueda en OpenAlex</h2>
+      <label className="bc-label" htmlFor="st-mail">Correo de contacto (opcional)</label>
+      <input id="st-mail" className="bc-input" type="email" value={value} onChange={(e) => setMail(e.target.value)} placeholder="usted@institucion.edu" />
+      <p className="bc-sub" style={{ fontSize: "0.82rem", marginTop: 6 }}>
+        Se envía a OpenAlex con cada consulta para identificar a quien busca, como recomienda su documentación. OpenAlex cobra por uso:
+        cada búsqueda cuesta 0,001 USD de un cupo gratuito diario de 0,10 USD (unas 100 búsquedas); buscar por DOI no consume cupo.
+      </p>
+      <button className="bc-btn bc-btn-primary" type="submit">Guardar</button>
+      {msg ? <div className="bc-alert" style={{ marginTop: 10 }}>{msg}</div> : null}
+    </form>
   );
 }

@@ -4,6 +4,22 @@ Formato basado en *Keep a Changelog*. Fechas en formato AAAA-MM-DD.
 
 ## [0.1.0-dev] — 2026-10-14
 
+### Fase 3: búsqueda científica real (OpenAlex)
+
+#### Añadido
+- Paquete `@biociencia/sources` con cliente de OpenAlex verificado contra la API real: búsqueda, filtros, orden, paginación, DOI, autocompletado de autores (con institución y ORCID) y revistas.
+- Preparación de preguntas en lenguaje natural con lista de palabras vacías en español e inglés; la consulta enviada se muestra al usuario.
+- Pantalla Buscador: modos pregunta/palabras clave, título, autor y revista; panel de filtros; guardar en biblioteca o proyecto; cargar más; historial que abre búsquedas guardadas sin conexión.
+- Indicación del costo de cada consulta y del saldo gratuito diario de OpenAlex.
+- Correo de contacto para OpenAlex en Configuración.
+- Repositorio: `saveSearch` devuelve el id local de cada resultado; `appendSearchResults` y `libraryMembership`.
+- Pruebas: respuestas reales de OpenAlex grabadas como datos de prueba; prueba en vivo `npm run test:live` para la PC del usuario.
+
+#### Verificado en la API real (2026-10-14)
+- CORS abierto (`Access-Control-Allow-Origin: *`): la web y la app Windows consultan directo, sin servidor intermedio.
+- Costos: búsqueda o lista 0,001 USD; DOI y autocompletado 0 USD; cupo gratuito sin clave 0,10 USD por día.
+
+
 ### Fase 2: estructura, interfaz y base de datos local
 
 #### Añadido

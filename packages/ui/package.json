@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@biociencia/core": "*",
+    "@biociencia/sources": "*",
     "@biociencia/storage": "*",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

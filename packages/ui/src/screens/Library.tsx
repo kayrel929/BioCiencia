@@ -82,7 +82,7 @@ export function Library() {
         {entries.error ? <div className="bc-alert bc-alert-error">{entries.error}</div> : null}
         {entries.data && entries.data.length === 0 ? (
           <div className="bc-empty">
-            {query || favorite || tag || collectionId ? "Ninguna publicación coincide con los filtros." : "Su biblioteca está vacía. Añada una referencia manual o, desde la Fase 3, guarde resultados de búsqueda."}
+            {query || favorite || tag || collectionId ? "Ninguna publicación coincide con los filtros." : "Su biblioteca está vacía. Guarde resultados desde el Buscador o añada una referencia manual."}
           </div>
         ) : null}
         {entries.data?.map((e) => (

@@ -9,6 +9,7 @@
     "preview": "vite preview --port 4173"
   },
   "dependencies": {
+    "@biociencia/sources": "*",
     "@biociencia/storage": "*",
     "@biociencia/ui": "*",
     "@sqlite.org/sqlite-wasm": "^3.50.4-build1",

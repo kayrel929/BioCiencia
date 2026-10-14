@@ -86,8 +86,6 @@ test("identidad, biblioteca sin duplicados, proyecto persistente y pantallas pen
     await nav(page, name).click();
     await expect(page.getByTestId("pending")).toBeVisible();
   }
-  await nav(page, "Buscador").click();
-  await expect(page.getByTestId("online-pending")).toBeVisible();
 });
 
 test("la interfaz se adapta a la pantalla de un teléfono", async ({ page }) => {

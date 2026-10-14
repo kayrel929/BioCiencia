@@ -69,7 +69,7 @@ export function Home() {
           {stats.data?.searches.length ? (
             stats.data.searches.map((s) => (
               <div key={s.id} style={{ fontSize: "0.9rem" }}>
-                <Link to={`/buscar?q=${encodeURIComponent(s.query)}`}>{s.query}</Link>
+                <Link to={`/buscar?s=${s.id}`}>{s.query}</Link>
               </div>
             ))
           ) : (
