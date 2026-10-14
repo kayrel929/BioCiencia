@@ -1,0 +1,26 @@
+{
+  "name": "biociencia",
+  "version": "0.1.0-dev",
+  "private": true,
+  "description": "BioCiencia – Plataforma Inteligente de Investigación Científica Colaborativa",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev:web": "npm run dev -w @biociencia/web",
+    "build:web": "npm run build -w @biociencia/web",
+    "dev:desktop": "npm run tauri -w @biociencia/desktop -- dev",
+    "build:desktop": "npm run tauri -w @biociencia/desktop -- build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}
