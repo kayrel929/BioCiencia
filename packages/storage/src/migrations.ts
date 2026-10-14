@@ -225,6 +225,38 @@ CREATE TABLE sync_log (
 );
 `,
   },
+  {
+    version: 2,
+    name: "sincronizacion",
+    sql: /* sql */ `
+-- Llaves Ed25519 de la identidad local (la privada nunca sale de esta computadora,
+-- salvo dentro de una copia de seguridad que el usuario decide crear).
+CREATE TABLE identity_keys (
+  identity_id TEXT PRIMARY KEY REFERENCES identity(id),
+  public_key TEXT NOT NULL,
+  secret_key TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+-- Eventos firmados de proyectos compartidos (el texto original se guarda tal cual en raw)
+CREATE TABLE sync_events (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  author_id TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  hlc TEXT NOT NULL,
+  type TEXT NOT NULL,
+  raw TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
+  reason TEXT,
+  local INTEGER NOT NULL DEFAULT 0,
+  exported INTEGER NOT NULL DEFAULT 0,
+  received_at TEXT NOT NULL
+);
+CREATE INDEX sync_events_project ON sync_events(project_id, hlc);
+CREATE INDEX sync_events_export ON sync_events(local, exported);
+`,
+  },
 ];
 
 import type { SqlDriver, Statement } from "./driver.ts";

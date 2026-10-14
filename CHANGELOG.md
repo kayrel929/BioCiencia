@@ -4,6 +4,22 @@ Formato basado en *Keep a Changelog*. Fechas en formato AAAA-MM-DD.
 
 ## [0.1.0-dev] — 2026-10-14
 
+### Fase 5: sincronización entre computadoras
+
+#### Añadido
+- Paquete `@biociencia/sync`: firmas Ed25519 (Web Crypto nativa), eventos firmados, reproducción determinista con permisos (`replayProject`), motor `SyncEngine`, transporte por carpeta y paquetes manuales.
+- Migración 2: tablas `identity_keys` y `sync_events`.
+- Repositorio: cambios en proyectos compartidos se firman automáticamente; `materializeProject`, `listProjectWorks`, `deleteNote`, registro de sincronización.
+- Windows: comandos `sync_list`, `sync_read`, `sync_append` (nombres validados, solo dentro de la carpeta elegida) y elección de carpeta con diálogo nativo.
+- Interfaz: pantalla Sincronización (código de investigador, carpeta, sincronizar ahora/automático, paquetes, registro); en el proyecto: compartir, invitar, roles, retirar e historial de cambios.
+- Documentación: `docs/SINCRONIZACION.md` con la guía de prueba en dos PC con Syncthing.
+
+#### Cambiado
+- Al restaurar una copia de seguridad se asigna un id de dispositivo nuevo (dos PC no deben escribir el mismo archivo de sincronización).
+- La bibliografía del proyecto se lista desde el proyecto, no desde la biblioteca personal.
+- La copia de seguridad avisa que contiene la llave privada de firma.
+
+
 ### Fase 4: referencias, historial y copias de seguridad
 
 #### Añadido

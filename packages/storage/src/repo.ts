@@ -47,6 +47,51 @@ export interface ProjectMember {
   role: Role;
 }
 
+/** Cambio local en un proyecto compartido: el módulo de sincronización lo convierte en evento firmado. */
+export type ProjectChange =
+  | { type: "project.update"; field: "name" | "description" | "objectives"; value: string }
+  | { type: "project.archive" }
+  | { type: "work.add"; work: Work }
+  | { type: "work.remove"; work: Work }
+  | { type: "note.add"; noteId: string; body: string }
+  | { type: "note.delete"; noteId: string };
+
+export type ProjectHook = (projectId: string, change: ProjectChange) => Promise<void>;
+
+/** Estado de un proyecto compartido calculado a partir de sus eventos. */
+export interface MaterializedProject {
+  id: string;
+  name: string;
+  description: string;
+  objectives: string;
+  ownerId: string;
+  archived: boolean;
+  members: { memberId: string; displayName: string; role: Role }[];
+  works: Work[];
+  notes: { noteId: string; body: string; author: string; hlc: string }[];
+}
+
+export interface StoredSyncEvent {
+  id: string;
+  projectId: string;
+  authorId: string;
+  deviceId: string;
+  hlc: string;
+  type: string;
+  raw: string;
+  local: boolean;
+}
+
+export interface SyncLogEntry {
+  id: string;
+  peer: string | null;
+  direction: string;
+  count: number;
+  status: string;
+  detail: string | null;
+  at: string;
+}
+
 export interface Collection {
   id: string;
   name: string;
@@ -153,7 +198,7 @@ export const BACKUP_FORMAT = "biociencia-backup-1";
 export const BACKUP_TABLES = [
   "identity", "devices", "settings", "works", "work_ids", "sources_log", "searches", "search_results",
   "library_items", "tags", "projects", "collections", "collection_items", "project_members", "project_works",
-  "notes", "files", "events", "sync_peers", "sync_log",
+  "notes", "files", "events", "sync_peers", "sync_log", "identity_keys", "sync_events",
 ] as const;
 
 export interface Backup {
@@ -170,6 +215,21 @@ export interface Backup {
  */
 export class BioRepo {
   constructor(private readonly db: SqlDriver) {}
+
+  private projectHook: ProjectHook | null = null;
+
+  /** El módulo de sincronización se registra aquí para enterarse de los cambios en proyectos compartidos. */
+  setProjectHook(hook: ProjectHook | null): void {
+    this.projectHook = hook;
+  }
+
+  private async emit(projectId: string, change: ProjectChange): Promise<void> {
+    const r = await this.db.all<{ visibility: string }>("SELECT visibility FROM projects WHERE id = ?", [projectId]);
+    if (r[0]?.visibility !== "shared") return;
+    // Un cambio en un proyecto compartido que no se firma nunca llegaría a los demás: mejor avisar.
+    if (!this.projectHook) throw new Error("La sincronización aún no está lista; el cambio se guardó solo en esta computadora. Intente de nuevo.");
+    await this.projectHook(projectId, change);
+  }
 
   async init(): Promise<number[]> {
     return migrate(this.db);
@@ -529,6 +589,10 @@ export class BioRepo {
     sets.push("updated_at = ?");
     params.push(now(), id);
     await this.db.batch([{ sql: `UPDATE projects SET ${sets.join(", ")} WHERE id = ?`, params }]);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === undefined || !["name", "description", "objectives"].includes(k)) continue;
+      await this.emit(id, { type: "project.update", field: k as "name", value: String(v) });
+    }
   }
 
   async listProjects(): Promise<Project[]> {
@@ -583,16 +647,163 @@ export class BioRepo {
       { sql: "INSERT OR IGNORE INTO project_works (project_id, work_id, added_at) VALUES (?, ?, ?)", params: [projectId, workId, now()] },
       { sql: "UPDATE projects SET updated_at = ? WHERE id = ?", params: [now(), projectId] },
     ]);
+    const w = await this.getWork(workId);
+    if (w) await this.emit(projectId, { type: "work.add", work: w });
   }
 
   async removeWorkFromProject(projectId: string, workId: string): Promise<void> {
     await this.requireRole(projectId, ["admin", "editor"]);
     await this.db.batch([{ sql: "DELETE FROM project_works WHERE project_id = ? AND work_id = ?", params: [projectId, workId] }]);
+    const w = await this.getWork(workId);
+    if (w) await this.emit(projectId, { type: "work.remove", work: w });
   }
 
+  /** Borra el proyecto en esta computadora. Si es compartido, además lo archiva para todos. */
   async deleteProject(projectId: string): Promise<void> {
     await this.requireRole(projectId, ["admin"]);
+    await this.emit(projectId, { type: "project.archive" });
     await this.db.batch([{ sql: "UPDATE projects SET deleted = 1, updated_at = ? WHERE id = ?", params: [now(), projectId] }]);
+  }
+
+  /** Publicaciones de un proyecto (estén o no en la biblioteca personal). */
+  async listProjectWorks(projectId: string): Promise<Work[]> {
+    const r = await this.db.all<WorkRow>(
+      "SELECT w.* FROM project_works p JOIN works w ON w.id = p.work_id WHERE p.project_id = ? AND w.deleted = 0 ORDER BY p.added_at DESC, w.id",
+      [projectId],
+    );
+    return r.map(rowToWork);
+  }
+
+  // ---------------- Sincronización ----------------
+
+  async getKeys(): Promise<{ publicKey: string; secretKey: string } | null> {
+    const me = await this.getIdentity();
+    if (!me) return null;
+    const r = await this.db.all<{ public_key: string; secret_key: string }>("SELECT public_key, secret_key FROM identity_keys WHERE identity_id = ?", [me.id]);
+    return r[0] ? { publicKey: r[0].public_key, secretKey: r[0].secret_key } : null;
+  }
+
+  async saveKeys(keys: { publicKey: string; secretKey: string }): Promise<void> {
+    const me = await this.getIdentity();
+    if (!me) throw new Error("Primero se debe crear la identidad local");
+    await this.db.batch([
+      { sql: "INSERT INTO identity_keys (identity_id, public_key, secret_key, created_at) VALUES (?, ?, ?, ?)", params: [me.id, keys.publicKey, keys.secretKey, now()] },
+      { sql: "UPDATE identity SET public_key = ? WHERE id = ?", params: [keys.publicKey, me.id] },
+    ]);
+  }
+
+  async markProjectShared(projectId: string): Promise<void> {
+    await this.db.batch([{ sql: "UPDATE projects SET visibility = 'shared', updated_at = ? WHERE id = ?", params: [now(), projectId] }]);
+  }
+
+  /** Guarda eventos nuevos (ignora los que ya existen). Devuelve los ids realmente nuevos. */
+  async insertSyncEvents(events: StoredSyncEvent[]): Promise<string[]> {
+    const fresh: StoredSyncEvent[] = [];
+    const seen = new Set<string>();
+    for (let i = 0; i < events.length; i += 200) {
+      const chunk = events.slice(i, i + 200);
+      const have = await this.db.all<{ id: string }>(`SELECT id FROM sync_events WHERE id IN (${chunk.map(() => "?").join(",")})`, chunk.map((e) => e.id));
+      const haveSet = new Set(have.map((h) => h.id));
+      for (const e of chunk) if (!haveSet.has(e.id) && !seen.has(e.id)) { fresh.push(e); seen.add(e.id); }
+    }
+    if (fresh.length === 0) return [];
+    const t = now();
+    await this.db.batch(
+      fresh.map((e) => ({
+        sql: "INSERT OR IGNORE INTO sync_events (id, project_id, author_id, device_id, hlc, type, raw, local, exported, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)",
+        params: [e.id, e.projectId, e.authorId, e.deviceId, e.hlc, e.type, e.raw, e.local ? 1 : 0, t],
+      })),
+    );
+    return fresh.map((e) => e.id);
+  }
+
+  async syncEventsRaw(projectId: string): Promise<string[]> {
+    const r = await this.db.all<{ raw: string }>("SELECT raw FROM sync_events WHERE project_id = ? ORDER BY hlc, id", [projectId]);
+    return r.map((x) => x.raw);
+  }
+
+  async syncProjectIds(): Promise<string[]> {
+    const r = await this.db.all<{ project_id: string }>("SELECT DISTINCT project_id FROM sync_events ORDER BY project_id");
+    return r.map((x) => x.project_id);
+  }
+
+  /** Eventos creados en esta computadora que aún no se escribieron en la carpeta de sincronización. */
+  async unexportedLocalEvents(): Promise<{ id: string; projectId: string; raw: string }[]> {
+    const r = await this.db.all<{ id: string; project_id: string; raw: string }>("SELECT id, project_id, raw FROM sync_events WHERE local = 1 AND exported = 0 ORDER BY hlc, id");
+    return r.map((x) => ({ id: x.id, projectId: x.project_id, raw: x.raw }));
+  }
+
+  async markExported(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    await this.db.batch(ids.map((id) => ({ sql: "UPDATE sync_events SET exported = 1 WHERE id = ?", params: [id] })));
+  }
+
+  async setSyncEventStatuses(items: { id: string; status: "accepted" | "rejected"; reason?: string | null }[]): Promise<void> {
+    if (items.length === 0) return;
+    await this.db.batch(items.map((x) => ({ sql: "UPDATE sync_events SET status = ?, reason = ? WHERE id = ?", params: [x.status, x.reason ?? null, x.id] })));
+  }
+
+  async syncEventCounts(): Promise<{ total: number; pendingExport: number; rejected: number }> {
+    const r = await this.db.all<{ total: number; pe: number; rj: number }>(
+      "SELECT COUNT(*) AS total, COALESCE(SUM(local = 1 AND exported = 0), 0) AS pe, COALESCE(SUM(status = 'rejected'), 0) AS rj FROM sync_events",
+    );
+    return { total: Number(r[0]?.total ?? 0), pendingExport: Number(r[0]?.pe ?? 0), rejected: Number(r[0]?.rj ?? 0) };
+  }
+
+  async addSyncLog(e: { peer?: string | null; direction: string; count: number; status: string; detail?: string | null }): Promise<void> {
+    await this.db.batch([
+      { sql: "INSERT INTO sync_log (id, peer, direction, events_count, status, detail, at) VALUES (?, ?, ?, ?, ?, ?, ?)", params: [ulid(), e.peer ?? null, e.direction, e.count, e.status, e.detail ?? null, now()] },
+    ]);
+  }
+
+  async listSyncLog(limit = 30): Promise<SyncLogEntry[]> {
+    const r = await this.db.all<{ id: string; peer: string | null; direction: string; events_count: number; status: string; detail: string | null; at: string }>(
+      "SELECT * FROM sync_log ORDER BY at DESC, id DESC LIMIT ?",
+      [limit],
+    );
+    return r.map((x) => ({ id: x.id, peer: x.peer, direction: x.direction, count: Number(x.events_count), status: x.status, detail: x.detail, at: x.at }));
+  }
+
+  /**
+   * Reemplaza los datos locales de un proyecto compartido por el estado calculado de sus eventos.
+   * Si la identidad local no es miembro, el proyecto se oculta (o no se crea).
+   */
+  async materializeProject(p: MaterializedProject): Promise<void> {
+    const me = await this.getIdentity();
+    if (!me) return;
+    const isMember = p.members.some((m) => m.memberId === me.id);
+    const exists = (await this.db.all("SELECT 1 FROM projects WHERE id = ?", [p.id])).length > 0;
+    if (!isMember) {
+      if (exists) await this.db.batch([{ sql: "UPDATE projects SET deleted = 1 WHERE id = ? AND visibility = 'shared'", params: [p.id] }]);
+      return;
+    }
+    const workIds: string[] = [];
+    for (const w of p.works) workIds.push((await this.upsertWork({ ...w, id: undefined })).id);
+    const t = now();
+    const stmts: Statement[] = [
+      {
+        sql: `INSERT INTO projects (id, name, description, objectives, owner_id, visibility, created_at, updated_at, deleted) VALUES (?, ?, ?, ?, ?, 'shared', ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET name = excluded.name, description = excluded.description, objectives = excluded.objectives,
+              owner_id = excluded.owner_id, visibility = 'shared', updated_at = excluded.updated_at, deleted = excluded.deleted`,
+        params: [p.id, p.name, p.description, p.objectives, p.ownerId, t, t, p.archived ? 1 : 0],
+      },
+      { sql: "DELETE FROM project_members WHERE project_id = ?", params: [p.id] },
+      ...p.members.map((m) => ({
+        sql: "INSERT INTO project_members (project_id, member_id, display_name, role, added_at) VALUES (?, ?, ?, ?, ?)",
+        params: [p.id, m.memberId, m.displayName, m.role, t],
+      })),
+      { sql: "DELETE FROM project_works WHERE project_id = ?", params: [p.id] },
+      ...[...new Set(workIds)].map((wid) => ({ sql: "INSERT OR IGNORE INTO project_works (project_id, work_id, added_at) VALUES (?, ?, ?)", params: [p.id, wid, t] })),
+      { sql: "DELETE FROM notes WHERE entity = 'project' AND entity_id = ?", params: [p.id] },
+      ...p.notes.map((n) => {
+        const at = hlcIso(n.hlc) ?? t;
+        return {
+          sql: "INSERT OR REPLACE INTO notes (id, entity, entity_id, body, author_id, created_at, updated_at) VALUES (?, 'project', ?, ?, ?, ?, ?)",
+          params: [n.noteId, p.id, n.body, n.author, at, at],
+        };
+      }),
+    ];
+    await this.db.batch(stmts);
   }
 
   // ---------------- Importación ----------------
@@ -669,6 +880,11 @@ export class BioRepo {
       if (!w?.id) continue;
       stmts.push(...ftsStatements(w.id, rowToWork(w)));
     }
+    // Si la copia se restaura en otra computadora, esta debe tener su propio id de dispositivo:
+    // dos equipos con el mismo id escribirían en el mismo archivo de sincronización.
+    stmts.push({ sql: "UPDATE devices SET id = ? WHERE is_local = 1", params: [ulid()] });
+    stmts.push({ sql: "UPDATE sync_events SET exported = 0 WHERE local = 1" });
+    stmts.push({ sql: "DELETE FROM settings WHERE key IN ('sync_hlc')" });
     await this.db.batch(stmts);
     return { rows };
   }
@@ -684,7 +900,14 @@ export class BioRepo {
     await this.db.batch([
       { sql: "INSERT INTO notes (id, entity, entity_id, body, author_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)", params: [id, entity, entityId, body.trim(), me.id, t, t] },
     ]);
+    if (entity === "project") await this.emit(entityId, { type: "note.add", noteId: id, body: body.trim() });
     return id;
+  }
+
+  async deleteNote(id: string): Promise<void> {
+    const r = await this.db.all<{ entity: string; entity_id: string }>("SELECT entity, entity_id FROM notes WHERE id = ?", [id]);
+    await this.db.batch([{ sql: "UPDATE notes SET deleted = 1, updated_at = ? WHERE id = ?", params: [now(), id] }]);
+    if (r[0]?.entity === "project") await this.emit(r[0].entity_id, { type: "note.delete", noteId: id });
   }
 
   async listNotes(entity: "work" | "project", entityId: string): Promise<{ id: string; body: string; createdAt: string }[]> {
@@ -705,6 +928,11 @@ interface ProjectRow {
   visibility: "private" | "shared";
   created_at: string;
   updated_at: string;
+}
+
+function hlcIso(hlc: string): string | null {
+  const ms = Number(hlc.slice(0, 13));
+  return Number.isFinite(ms) && ms > 0 ? new Date(ms).toISOString() : null;
 }
 
 function rowToProject(r: ProjectRow): Project {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { HashRouter, NavLink, Route, Routes } from "react-router-dom";
 import type { BioRepo } from "@biociencia/storage";
-import { AppProvider, useApp, type Platform, type SaveFile } from "./context.tsx";
+import { AppProvider, useApp, type Platform, type SaveFile, type SyncFolderAccess } from "./context.tsx";
 import { Logo } from "./components/Logo.tsx";
 import { Icon } from "./components/Icon.tsx";
 import { Welcome } from "./screens/Welcome.tsx";
@@ -9,7 +9,8 @@ import { Home } from "./screens/Home.tsx";
 import { Search } from "./screens/Search.tsx";
 import { Library } from "./screens/Library.tsx";
 import { ProjectDetail, Projects } from "./screens/Projects.tsx";
-import { Analysis, Editor, Researchers, Settings, Statistics, SyncScreen } from "./screens/Others.tsx";
+import { Analysis, Editor, Researchers, Settings, Statistics } from "./screens/Others.tsx";
+import { AutoSync, SyncScreen } from "./screens/Sync.tsx";
 
 const NAV: { group: string; items: { to: string; label: string; icon: string; phase?: number }[] }[] = [
   {
@@ -33,7 +34,7 @@ const NAV: { group: string; items: { to: string; label: string; icon: string; ph
     group: "Colaborar",
     items: [
       { to: "/investigadores", label: "Investigadores", icon: "people", phase: 6 },
-      { to: "/sincronizacion", label: "Sincronización", icon: "sync", phase: 5 },
+      { to: "/sincronizacion", label: "Sincronización", icon: "sync" },
       { to: "/configuracion", label: "Configuración", icon: "settings" },
     ],
   },
@@ -106,9 +107,10 @@ function Shell() {
   );
 }
 
-export function BioCienciaApp({ repo, platform, saveFile }: { repo: BioRepo; platform: Platform; saveFile?: SaveFile }) {
+export function BioCienciaApp({ repo, platform, saveFile, syncFolder }: { repo: BioRepo; platform: Platform; saveFile?: SaveFile; syncFolder?: SyncFolderAccess }) {
   return (
-    <AppProvider repo={repo} platform={platform} saveFile={saveFile}>
+    <AppProvider repo={repo} platform={platform} saveFile={saveFile} syncFolder={syncFolder ?? null}>
+      <AutoSync />
       <HashRouter>
         <Shell />
       </HashRouter>

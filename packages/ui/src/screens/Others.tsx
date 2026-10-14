@@ -80,31 +80,6 @@ export function Researchers() {
   );
 }
 
-export function SyncScreen() {
-  const { identity, platform } = useApp();
-  return (
-    <div className="bc-page">
-      <h1>Sincronización</h1>
-      <div className="bc-card" style={{ marginBottom: 16 }}>
-        <h2>Este dispositivo</h2>
-        <p className="mono" style={{ margin: 0, fontSize: "0.85rem" }}>{identity?.deviceId}</p>
-        <p className="bc-sub" style={{ fontSize: "0.85rem" }}>
-          {platform === "desktop" ? "Aplicación Windows" : "Aplicación web (sincronización P2P directa no disponible en el navegador)"}
-        </p>
-      </div>
-      <Pending
-        phase={5}
-        title="Sincronización entre computadoras autorizadas"
-        items={[
-          "Registro de eventos firmados; nunca se copia el archivo de la base de datos.",
-          "Transporte por Syncthing en red local o entre ciudades (relays si no hay conexión directa).",
-          "Sincronización selectiva por proyecto, automática o manual, con historial.",
-          "Resolución de conflictos sin sobrescribir cambios.",
-        ]}
-      />
-    </div>
-  );
-}
 
 export function Settings() {
   const { repo, identity, setIdentity, theme, setTheme, platform } = useApp();
@@ -214,6 +189,10 @@ function BackupCard() {
       <p className="bc-sub" style={{ fontSize: "0.85rem" }}>
         Guarda toda su información (biblioteca, proyectos, notas, historial) en un archivo .json. Sirve también para pasar sus datos de la versión web a la de Windows o al revés.
       </p>
+      <div className="bc-alert bc-alert-warn" style={{ fontSize: "0.85rem", marginBottom: 10 }}>
+        La copia incluye su <strong>llave privada de firma</strong> (con ella se firman sus cambios en proyectos compartidos).
+        Guárdela en un lugar seguro y no la envíe a otras personas: para invitarle a un proyecto solo hace falta su código de investigador.
+      </div>
       <div className="bc-row">
         <button
           className="bc-btn bc-btn-primary"

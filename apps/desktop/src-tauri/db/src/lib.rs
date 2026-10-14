@@ -2,6 +2,8 @@
 //! Expone la misma interfaz que usa el código TypeScript (`SqlDriver`):
 //! exec, all, batch (transacción) y describe.
 
+pub mod syncdir;
+
 use rusqlite::types::{Value as SqlValue, ValueRef};
 use rusqlite::{params_from_iter, Connection};
 use serde::Deserialize;

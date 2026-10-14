@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { BioRepo, Identity } from "@biociencia/storage";
 import { OpenAlexClient } from "@biociencia/sources";
+import { SyncEngine, type SyncTransport } from "@biociencia/sync";
 
 export type Platform = "desktop" | "web";
 
@@ -20,6 +21,13 @@ export const browserSaveFile: SaveFile = async (fileName, content, mime) => {
   return true;
 };
 
+/** Acceso a una carpeta de sincronización (solo en la aplicación de Windows). */
+export interface SyncFolderAccess {
+  /** Abre el diálogo para elegir la carpeta. Devuelve null si el usuario cancela. */
+  pick(): Promise<string | null>;
+  transport(root: string): SyncTransport;
+}
+
 interface AppState {
   repo: BioRepo;
   platform: Platform;
@@ -33,11 +41,15 @@ interface AppState {
   /** Cliente de OpenAlex (usa fetch del navegador o de la WebView de Windows) */
   openalex: OpenAlexClient;
   saveFile: SaveFile;
+  sync: SyncEngine;
+  syncFolder: SyncFolderAccess | null;
 }
 
 const Ctx = createContext<AppState | null>(null);
 
-export function AppProvider({ repo, platform, saveFile = browserSaveFile, children }: { repo: BioRepo; platform: Platform; saveFile?: SaveFile; children: ReactNode }) {
+export function AppProvider({
+  repo, platform, saveFile = browserSaveFile, syncFolder = null, children,
+}: { repo: BioRepo; platform: Platform; saveFile?: SaveFile; syncFolder?: SyncFolderAccess | null; children: ReactNode }) {
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [version, setVersion] = useState(0);
   const [theme, setThemeState] = useState<"light" | "dark">(
@@ -45,6 +57,14 @@ export function AppProvider({ repo, platform, saveFile = browserSaveFile, childr
   );
 
   const openalex = useMemo(() => new OpenAlexClient((url, init) => fetch(url, init)), []);
+  const sync = useMemo(() => new SyncEngine(repo), [repo]);
+
+  // Con identidad creada, la sincronización escucha los cambios de proyectos compartidos
+  useEffect(() => {
+    if (!identity) return;
+    void sync.attach().catch((e) => console.error("Sincronización:", e instanceof Error ? e.message : e));
+    return () => sync.detach();
+  }, [identity, sync]);
 
   useEffect(() => {
     void repo.getIdentity().then(setIdentity);
@@ -67,7 +87,7 @@ export function AppProvider({ repo, platform, saveFile = browserSaveFile, childr
   );
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
 
-  return <Ctx.Provider value={{ repo, platform, identity, version, refresh, setIdentity, theme, setTheme, openalex, saveFile }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ repo, platform, identity, version, refresh, setIdentity, theme, setTheme, openalex, saveFile, sync, syncFolder }}>{children}</Ctx.Provider>;
 }
 
 export function useApp(): AppState {

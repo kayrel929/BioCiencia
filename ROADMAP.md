@@ -9,8 +9,8 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 | 3 | Búsqueda científica real con OpenAlex | ✅ (🔎 `npm run test:live` en su PC) |
 | 3b | Más fuentes: Crossref, PubMed, Europe PMC, arXiv, DOAJ + unificación | ⬜ |
 | 4 | Exportación e importación (BibTeX, RIS, EndNote, CSV, CSL-JSON), historial, copias de seguridad | ✅ (🔎 abrir los archivos en Zotero/EndNote) |
-| 5 | Sincronización entre dos computadoras (eventos firmados + Syncthing) | ⬜ |
-| 6 | Proyectos compartidos, invitaciones y permisos sincronizados | ⬜ |
+| 5 | Sincronización entre dos computadoras (eventos firmados + Syncthing) | ✅ simulada (🔎 prueba real con dos PC y Syncthing) |
+| 6 | Proyectos compartidos, invitaciones y permisos sincronizados | 🟡 lo básico ya está en la Fase 5; falta directorio de investigadores |
 | 7 | IA (Ollama local / API con permiso) y análisis de PDF | ⬜ |
 | 8 | Editor científico, CRDT y estilos de cita | ⬜ |
 | 9 | Estadística | ⬜ |
@@ -51,9 +51,21 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 - ✅ Pruebas: 25 nuevas (Vitest) + 1 de interfaz que descarga y revisa los 6 formatos y restaura en otro navegador.
 - 🔎 Abrir los archivos exportados en Zotero y EndNote en su PC.
 
+## Fase 5 — detalle
+
+- ✅ Llaves Ed25519 por identidad con Web Crypto nativa (sin dependencias nuevas).
+- ✅ Eventos firmados e inmutables con reloj HLC; reproducción determinista con permisos por rol.
+- ✅ Conflictos: el mismo campo → gana el más reciente y el otro queda en el historial; campos distintos se combinan.
+- ✅ Sincronización selectiva: solo proyectos compartidos y solo para sus miembros.
+- ✅ Carpeta compartida (Syncthing / red / USB) con un archivo por dispositivo; tolera archivos a medio copiar.
+- ✅ Paquetes manuales de sincronización (versión web, correo, USB).
+- ✅ Interfaz: compartir proyecto, invitar por código, cambiar rol, retirar, historial de cambios, pantalla de sincronización con registro y modo automático.
+- ✅ Pruebas: 14 de dos/tres nodos simulados + 3 de firmas (Vitest), 2 en Rust, 1 de interfaz con dos navegadores.
+- 🔎 Prueba con dos PC Windows reales y Syncthing: pasos en `docs/SINCRONIZACION.md`.
+
 ## Pendientes conocidos
 
 - Licencia del proyecto por definir con el grupo.
 - Búsqueda en vivo verificada solo desde el navegador del usuario; falta `npm run test:live` en su PC.
 - Clave de API de OpenAlex (para superar el cupo gratuito de 0,10 USD/día): pendiente, se guardará en el Administrador de credenciales de Windows.
-- Sincronización básica entre dos PC: Fase 5 (requisito de la v0.1).
+- Sincronización: falta la prueba con dos PC reales; los eventos están firmados pero no cifrados (cifrado por proyecto: Fase 11).

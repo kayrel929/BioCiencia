@@ -9,7 +9,7 @@ P2P entre computadoras, asistente de IA con referencias verificables, editor de
 manuscritos y estadística. Funciona en **Windows** (Tauri) y en el **navegador** (PWA),
 con el mismo código.
 
-> Estado: **v0.1.0 en desarrollo — Fases 2, 3 y 4 completadas.** Ver [ROADMAP.md](ROADMAP.md).
+> Estado: **v0.1.0 en desarrollo — Fases 2 a 5 completadas** (la sincronización falta probarla con dos PC reales). Ver [ROADMAP.md](ROADMAP.md).
 
 ## Qué funciona hoy
 
@@ -25,10 +25,13 @@ con el mismo código.
 - Historial de búsquedas que se puede abrir sin internet ni costo; guardar resultados en la biblioteca o en un proyecto.
 - Exportar referencias a BibTeX, RIS, EndNote (.enw y XML), CSV y CSL-JSON; importar desde Zotero, Mendeley, EndNote o JabRef sin duplicar.
 - Copias de seguridad completas y restauración (también para pasar datos entre web y Windows).
+- Proyectos compartidos entre computadoras: invitación por código, roles, cambios firmados, historial y conflictos resueltos sin perder datos.
 
 **Todavía no** (pantallas marcadas «Pendiente · Fase N»): otras fuentes además de OpenAlex
-(Fase 3b), sincronización (Fase 5),
-invitaciones (Fase 6), IA y PDF (Fase 7), editor (Fase 8), estadística (Fase 9).
+(Fase 3b),
+directorio de investigadores (Fase 6), IA y PDF (Fase 7), editor (Fase 8), estadística (Fase 9).
+
+Sincronización (cómo funciona y cómo probarla en dos PC): [docs/SINCRONIZACION.md](docs/SINCRONIZACION.md).
 
 ## Requisitos
 
@@ -58,6 +61,7 @@ Instalador de Windows: ver [docs/INSTALACION-WINDOWS.md](docs/INSTALACION-WINDOW
 packages/core      Identificadores, DOI, duplicados, reloj HLC (TypeScript)
 packages/sources   Clientes de fuentes científicas (OpenAlex)
 packages/storage   Esquema SQL, migraciones y repositorio (mismo SQL en Windows y web)
+packages/sync      Firmas Ed25519, eventos, reproducción con permisos, motor de sincronización
 packages/ui        Interfaz React (pantallas, componentes, estilos)
 apps/web           Versión web/PWA: SQLite WebAssembly en OPFS
 apps/desktop       Versión Windows: Tauri 2 + Rust

@@ -1,4 +1,4 @@
-use biociencia_db::{Db, Stmt};
+use biociencia_db::{syncdir, Db, Stmt};
 use serde_json::{Map, Value};
 use tauri::{Manager, State};
 
@@ -42,6 +42,24 @@ fn save_text_file(path: String, contents: String) -> Result<(), String> {
     })
 }
 
+// ---------------- Carpeta de sincronización (Fase 5) ----------------
+// La carpeta la elige el usuario con el diálogo nativo; los nombres se validan en syncdir.
+
+#[tauri::command]
+fn sync_list(root: String) -> Result<Vec<syncdir::SyncFile>, String> {
+    syncdir::list(&root)
+}
+
+#[tauri::command]
+fn sync_read(root: String, project: String, device: String) -> Result<String, String> {
+    syncdir::read(&root, &project, &device)
+}
+
+#[tauri::command]
+fn sync_append(root: String, project: String, device: String, text: String) -> Result<(), String> {
+    syncdir::append(&root, &project, &device, &text)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -54,7 +72,7 @@ pub fn run() {
             app.manage(db);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![db_exec, db_all, db_batch, db_describe, save_text_file])
+        .invoke_handler(tauri::generate_handler![db_exec, db_all, db_batch, db_describe, save_text_file, sync_list, sync_read, sync_append])
         .run(tauri::generate_context!())
         .expect("error al iniciar BioCiencia");
 }
