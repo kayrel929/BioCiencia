@@ -7,7 +7,7 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 | 1 | Análisis de Consensus con REA y arquitectura | ✅ |
 | 2 | Estructura, interfaz, navegación y base de datos local | ✅ (web verificada en su PC; 🔎 app Windows) |
 | 3 | Búsqueda científica real con OpenAlex | ✅ verificada en su PC |
-| 3b | Más fuentes: Crossref, PubMed, Europe PMC, arXiv, DOAJ + unificación | ⬜ |
+| 3b | Más fuentes: Crossref, PubMed, Europe PMC, DOAJ + unificación; acceso legal al texto completo | ✅ (🔎 `npm.cmd run test:live` en su PC) |
 | 4 | Exportación e importación (BibTeX, RIS, EndNote, CSV, CSL-JSON), historial, copias de seguridad | ✅ (EndNote verificado en su PC) |
 | 5 | Sincronización entre dos computadoras (eventos firmados + Syncthing) | ✅ simulada (🔎 prueba real con dos PC y Syncthing) |
 | 6 | Proyectos compartidos, invitaciones y permisos sincronizados | 🟡 lo básico ya está en la Fase 5; falta directorio de investigadores |
@@ -50,6 +50,18 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 - ✅ Errores encontrados por las pruebas de ida y vuelta y corregidos: llaves escapadas en BibTeX y palabras clave en EndNote.
 - ✅ Pruebas: 25 nuevas (Vitest) + 1 de interfaz que descarga y revisa los 6 formatos y restaura en otro navegador.
 - 🔎 Abrir los archivos exportados en Zotero y EndNote en su PC.
+
+## Fase 3b — detalle
+
+- ✅ Clientes de Crossref, PubMed (E-utilities), Europe PMC y DOAJ, todos gratuitos; OpenAlex queda opcional.
+- ✅ Búsqueda en paralelo, unión de repetidos por DOI/PMID (con «Encontrado en: …»), resultados intercalados por relevancia.
+- ✅ Si una fuente falla, las demás siguen y el error se muestra; con «solo acceso abierto» se omite Crossref (no puede filtrarlo).
+- ✅ «¿Dónde leerlo?»: Unpaywall (copias legales), proxy institucional, correo al autor, Google Académico.
+- ✅ Configuración: correo de contacto (solo para estas APIs) y proxy de biblioteca.
+- ✅ Vitest actualizado a 5.0.4: 0 vulnerabilidades.
+- ✅ Pruebas: 22 nuevas con respuestas reales grabadas (verificadas con SHA-256) + 2 de interfaz; prueba en vivo de los clientes ejecutada en el navegador del usuario (4 fuentes y Unpaywall respondieron).
+- ⬜ arXiv y CORE: no permiten llamadas desde el navegador → app de Windows (Fase 10).
+- ⬜ SciELO directo: sin API JSON estable; sus revistas llegan por Crossref, DOAJ y OpenAlex.
 
 ## Fase 5 — detalle
 

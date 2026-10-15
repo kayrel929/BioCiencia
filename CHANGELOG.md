@@ -4,6 +4,22 @@ Formato basado en *Keep a Changelog*. Fechas en formato AAAA-MM-DD.
 
 ## [0.1.0-dev] — 2026-10-15
 
+### Fase 3b: fuentes gratuitas y acceso legal al texto completo
+
+#### Añadido
+- Fuentes gratuitas: Crossref, PubMed (E-utilities), Europe PMC y DOAJ, con filtros de año, acceso abierto y orden verificados en las API reales.
+- Búsqueda combinada: consultas en paralelo, unión de repetidos, resultado por fuente y errores visibles.
+- Selector de fuentes en el buscador (se recuerda); OpenAlex opcional, indicando su costo.
+- «¿Dónde leerlo?» en el buscador y la biblioteca: Unpaywall, acceso institucional, correo al autor, Google Académico.
+- «Buscar también en Google Académico» para la consulta completa.
+- Configuración «Fuentes científicas y acceso al texto completo»: correo de contacto y proxy de biblioteca.
+- Respuestas reales grabadas y documentadas en `packages/sources/tests/fixtures/FUENTES.md`; prueba en vivo `tests/live/fuentes.live.test.ts`.
+
+#### Cambiado
+- Vitest 3 → 5.0.4 (quita 3 vulnerabilidades de la herramienta de pruebas; la app no cambia).
+- La app de Windows permite conectarse a las nuevas fuentes (CSP) y abre los correos `mailto:` en el programa de correo.
+
+
 ### Mejoras tras la prueba en la PC del usuario
 - Verificado en Windows con Node 24.21: 86 pruebas aprobadas y búsqueda real en OpenAlex desde la versión web.
 - Nuevo: «Descargar cita…» en cada resultado del buscador y de la biblioteca (EndNote .enw/XML, RIS, BibTeX, CSV, CSL-JSON), sin necesidad de guardarlo antes.

@@ -146,34 +146,43 @@ export function Settings() {
   );
 }
 
-/** Correo de contacto que OpenAlex pide para identificar a quién consulta. */
+/** Correo de contacto para las APIs científicas y proxy de la biblioteca institucional. */
 function OpenAlexSettings() {
-  const { repo, openalex } = useApp();
-  const current = useAsync(() => repo.getSetting("openalex_mailto"), []);
+  const { contactEmail, setContactEmail, libraryProxy, setLibraryProxy } = useApp();
   const [mail, setMail] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
-  const value = mail ?? current.data ?? "";
+  const [proxy, setProxy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null);
+  const mailValue = mail ?? contactEmail ?? "";
+  const proxyValue = proxy ?? libraryProxy ?? "";
   return (
     <form
       className="bc-card"
-      onSubmit={async (e) => {
+      onSubmit={(e) => {
         e.preventDefault();
-        const v = value.trim();
-        if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return setMsg("El correo no es válido.");
-        await repo.setSetting("openalex_mailto", v);
-        openalex.setMailto(v || null);
-        setMsg(v ? "Correo guardado." : "Correo eliminado.");
+        const v = mailValue.trim();
+        const p = proxyValue.trim();
+        if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return setMsg({ text: "El correo no es válido.", error: true });
+        if (p && !/^https:\/\/\S+$/i.test(p)) return setMsg({ text: "El proxy debe empezar con https://", error: true });
+        setContactEmail(v || null);
+        setLibraryProxy(p || null);
+        setMsg({ text: "Configuración guardada." });
       }}
     >
-      <h2>Búsqueda en OpenAlex</h2>
-      <label className="bc-label" htmlFor="st-mail">Correo de contacto (opcional)</label>
-      <input id="st-mail" className="bc-input" type="email" value={value} onChange={(e) => setMail(e.target.value)} placeholder="usted@institucion.edu" />
+      <h2>Fuentes científicas y acceso al texto completo</h2>
+      <label className="bc-label" htmlFor="st-mail">Correo de contacto</label>
+      <input id="st-mail" className="bc-input" type="email" value={mailValue} onChange={(e) => setMail(e.target.value)} placeholder="usted@institucion.edu" />
       <p className="bc-sub" style={{ fontSize: "0.82rem", marginTop: 6 }}>
-        Se envía a OpenAlex con cada consulta para identificar a quien busca, como recomienda su documentación. OpenAlex cobra por uso:
-        cada búsqueda cuesta 0,001 USD de un cupo gratuito diario de 0,10 USD (unas 100 búsquedas); buscar por DOI no consume cupo.
+        Se envía solo a OpenAlex, Crossref, PubMed y Unpaywall, que lo piden para identificar a quien consulta (sin él, Unpaywall no busca copias legales).
+        No se envía a ningún otro sitio. OpenAlex cobra por uso: 0,001 USD por búsqueda de un cupo gratuito diario de 0,10 USD; las demás fuentes son gratuitas.
+      </p>
+      <label className="bc-label" htmlFor="st-proxy">Proxy de la biblioteca institucional (opcional)</label>
+      <input id="st-proxy" className="bc-input" value={proxyValue} onChange={(e) => setProxy(e.target.value)} placeholder="https://login.ezproxy.su-universidad.edu/login?url=" />
+      <p className="bc-sub" style={{ fontSize: "0.82rem", marginTop: 6 }}>
+        Si su universidad o instituto tiene suscripciones, su biblioteca le da esta dirección. Con ella aparece «Acceso institucional» en cada artículo
+        y usted entra con su propia cuenta de la biblioteca (BioCiencia no guarda esa contraseña).
       </p>
       <button className="bc-btn bc-btn-primary" type="submit">Guardar</button>
-      {msg ? <div className="bc-alert" style={{ marginTop: 10 }}>{msg}</div> : null}
+      {msg ? <div className={`bc-alert ${msg.error ? "bc-alert-error" : ""}`} role="status" style={{ marginTop: 10 }}>{msg.text}</div> : null}
     </form>
   );
 }

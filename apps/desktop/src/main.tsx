@@ -44,7 +44,7 @@ document.addEventListener("click", (ev) => {
   const a = (ev.target as HTMLElement | null)?.closest("a");
   if (!a) return;
   const href = a.getAttribute("href") ?? "";
-  if (/^https?:\/\//i.test(href)) {
+  if (/^(https?:\/\/|mailto:)/i.test(href)) {
     ev.preventDefault();
     void openUrl(href);
   }

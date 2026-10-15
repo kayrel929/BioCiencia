@@ -26,6 +26,15 @@ async function login(page: Page) {
   await page.goto("/");
   await page.getByLabel("Nombre").fill("Christopher Suárez");
   await page.getByRole("button", { name: "Crear identidad y entrar" }).click();
+  await onlyOpenAlex(page);
+}
+
+/** Estas pruebas son del buscador de OpenAlex: se deja solo esa fuente (la elección se recuerda). */
+async function onlyOpenAlex(page: Page) {
+  await page.getByRole("navigation").getByRole("link", { name: "Buscador", exact: true }).click();
+  await page.getByRole("checkbox", { name: /^OpenAlex/ }).check();
+  for (const s of ["Europe PMC", "PubMed", "Crossref", "DOAJ"]) await page.getByRole("checkbox", { name: new RegExp(`^${s}`) }).uncheck();
+  await page.getByRole("navigation").getByRole("link", { name: "Inicio", exact: true }).click();
 }
 
 test("pregunta científica → resultados reales grabados → guardar → ver sin conexión", async ({ page }) => {

@@ -21,24 +21,38 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://api.openalex.org https://api.crossref.org; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://api.openalex.org https://api.crossref.org https://eutils.ncbi.nlm.nih.gov https://www.ebi.ac.uk https://doaj.org https://api.unpaywall.org; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi"],
+    "targets": [
+      "nsis",
+      "msi"
+    ],
     "publisher": "BioCiencia",
     "category": "Education",
     "shortDescription": "Plataforma Inteligente de Investigación Científica Colaborativa",
     "longDescription": "BioCiencia – La ciencia conectada, el conocimiento compartido. Búsqueda científica, biblioteca local, proyectos y colaboración entre investigadores.",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
     "windows": {
       "nsis": {
-        "languages": ["Spanish", "English"],
+        "languages": [
+          "Spanish",
+          "English"
+        ],
         "installMode": "currentUser"
       },
       "wix": {
-        "language": ["es-ES", "en-US"]
+        "language": [
+          "es-ES",
+          "en-US"
+        ]
       }
     }
   }

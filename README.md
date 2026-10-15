@@ -9,7 +9,7 @@ P2P entre computadoras, asistente de IA con referencias verificables, editor de
 manuscritos y estadística. Funciona en **Windows** (Tauri) y en el **navegador** (PWA),
 con el mismo código.
 
-> Estado: **v0.1.0 en desarrollo — Fases 2 a 5 completadas** (la sincronización falta probarla con dos PC reales). Ver [ROADMAP.md](ROADMAP.md).
+> Estado: **v0.1.0 en desarrollo — Fases 2, 3, 3b, 4 y 5 completadas** (la sincronización falta probarla con dos PC reales). Ver [ROADMAP.md](ROADMAP.md).
 
 ## Qué funciona hoy
 
@@ -27,9 +27,10 @@ con el mismo código.
 - Copias de seguridad completas y restauración (también para pasar datos entre web y Windows).
 - Proyectos compartidos entre computadoras: invitación por código, roles, cambios firmados, historial y conflictos resueltos sin perder datos.
 
-**Todavía no** (pantallas marcadas «Pendiente · Fase N»): otras fuentes además de OpenAlex
-(Fase 3b),
-directorio de investigadores (Fase 6), IA y PDF (Fase 7), editor (Fase 8), estadística (Fase 9).
+- Búsqueda gratuita en Europe PMC, PubMed, Crossref y DOAJ a la vez (OpenAlex opcional), sin repetidos.
+- «¿Dónde leerlo?»: copias legales gratuitas (Unpaywall), acceso institucional, pedir al autor, Google Académico.
+
+**Todavía no** (pantallas marcadas «Pendiente · Fase N»): directorio de investigadores (Fase 6), IA y PDF (Fase 7), editor (Fase 8), estadística (Fase 9).
 
 Sincronización (cómo funciona y cómo probarla en dos PC): [docs/SINCRONIZACION.md](docs/SINCRONIZACION.md).
 
@@ -75,12 +76,16 @@ docs/              Arquitectura, análisis de referencia, guías
 | Comando | Qué prueba |
 | --- | --- |
 | `npm test` | Núcleo, base de datos y cliente OpenAlex con respuestas reales grabadas (69 pruebas) |
-| `npm run test:live` | Búsqueda real en OpenAlex (requiere internet; ~0,003 USD del cupo gratuito) |
+| `npm run test:live` | Búsquedas reales en OpenAlex (~0,003 USD del cupo gratuito) y en las fuentes gratuitas (requiere internet; opcional `BC_EMAIL=su@correo` para Unpaywall) |
 | `cargo test --manifest-path apps/desktop/src-tauri/db/Cargo.toml` | SQLite nativo de Rust, FTS5, transacciones, copia (4 pruebas) |
 | `npx playwright test` | Interfaz web completa en Chromium (5 pruebas) |
 | `npm run typecheck` | Tipos de TypeScript |
 
-## Uso de OpenAlex y costos
+## Fuentes y costos
+
+Por defecto se busca en **Europe PMC, PubMed, Crossref y DOAJ, que son gratuitas**. OpenAlex es opcional
+(casilla en el buscador) y la búsqueda por título, autor o revista lo usa. arXiv y CORE no permiten llamadas
+desde el navegador y quedan para la app de Windows. Detalles verificados: `packages/sources/tests/fixtures/FUENTES.md`.
 
 OpenAlex cobra por uso: cada búsqueda cuesta 0,001 USD de un cupo gratuito diario de 0,10 USD
 (unas 100 búsquedas por día y por conexión); buscar por DOI y el autocompletado no consumen cupo.
@@ -95,9 +100,10 @@ Configuración, como recomienda OpenAlex.
 
 ## Acceso a texto completo
 
-BioCiencia solo integra vías legales: copias de acceso abierto (Unpaywall, OpenAlex,
-CORE, Europe PMC, SciELO, DOAJ, arXiv), el acceso institucional del propio usuario y la
-solicitud directa al autor. No se conecta a servicios que distribuyen artículos sin
+BioCiencia solo integra vías legales. El botón «¿Dónde leerlo?» de cada artículo consulta Unpaywall
+(copias legales en la editorial, PubMed Central y repositorios institucionales) y ofrece el acceso
+institucional del propio usuario (proxy de su biblioteca), un correo preparado para pedir el artículo al
+autor y la búsqueda en Google Académico (se abre en el navegador; Google no ofrece API). No se conecta a servicios que distribuyen artículos sin
 autorización de sus titulares.
 
 ## Documentación
