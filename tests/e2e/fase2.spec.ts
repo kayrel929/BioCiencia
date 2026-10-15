@@ -82,7 +82,7 @@ test("identidad, biblioteca sin duplicados, proyecto persistente y pantallas pen
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/04-configuracion-oscuro.png` });
 
   // 7. Los módulos futuros se declaran pendientes, no simulados
-  for (const name of ["Análisis con IA", "Editor científico", "Estadística", "Investigadores"]) {
+  for (const name of ["Análisis con IA", "Editor científico", "Estadística"]) {
     await nav(page, name).click();
     await expect(page.getByTestId("pending")).toBeVisible();
   }

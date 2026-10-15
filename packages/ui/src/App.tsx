@@ -9,7 +9,8 @@ import { Home } from "./screens/Home.tsx";
 import { Search } from "./screens/Search.tsx";
 import { Library } from "./screens/Library.tsx";
 import { ProjectDetail, Projects } from "./screens/Projects.tsx";
-import { Analysis, Editor, Researchers, Settings, Statistics } from "./screens/Others.tsx";
+import { Analysis, Editor, Settings, Statistics } from "./screens/Others.tsx";
+import { Researchers } from "./screens/Researchers.tsx";
 import { AutoSync, SyncScreen } from "./screens/Sync.tsx";
 
 const NAV: { group: string; items: { to: string; label: string; icon: string; phase?: number }[] }[] = [
@@ -33,7 +34,7 @@ const NAV: { group: string; items: { to: string; label: string; icon: string; ph
   {
     group: "Colaborar",
     items: [
-      { to: "/investigadores", label: "Investigadores", icon: "people", phase: 6 },
+      { to: "/investigadores", label: "Investigadores", icon: "people" },
       { to: "/sincronizacion", label: "Sincronización", icon: "sync" },
       { to: "/configuracion", label: "Configuración", icon: "settings" },
     ],

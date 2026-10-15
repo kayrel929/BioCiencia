@@ -8,3 +8,4 @@ export * from "./doaj.ts";
 export * from "./unpaywall.ts";
 export * from "./unified.ts";
 export * from "./links.ts";
+export * from "./orcid.ts";

@@ -13,6 +13,8 @@ export function Library() {
   const [text, setText] = useState("");
   const [query, setQuery] = useState("");
   const [favorite, setFavorite] = useState(false);
+  const [own, setOwn] = useState(false);
+  const ownIds = useAsync(() => repo.ownWorkIds(), []);
   const [tag, setTag] = useState("");
   const [collectionId, setCollectionId] = useState("");
   const [adding, setAdding] = useState(false);
@@ -21,8 +23,8 @@ export function Library() {
   const [editing, setEditing] = useState<LibraryEntry | null>(null);
 
   const entries = useAsync(
-    () => repo.listLibrary({ text: query || undefined, favorite, tag: tag || undefined, collectionId: collectionId || undefined }),
-    [query, favorite, tag, collectionId],
+    () => repo.listLibrary({ text: query || undefined, favorite, own, tag: tag || undefined, collectionId: collectionId || undefined }),
+    [query, favorite, own, tag, collectionId],
   );
   const tags = useAsync(() => repo.allTags(), []);
   const collections = useAsync(() => repo.listCollections(), []);
@@ -64,6 +66,9 @@ export function Library() {
           <label className="bc-row" style={{ gap: 6 }}>
             <input type="checkbox" checked={favorite} onChange={(e) => setFavorite(e.target.checked)} /> Favoritos
           </label>
+          <label className="bc-row" style={{ gap: 6 }}>
+            <input type="checkbox" checked={own} onChange={(e) => setOwn(e.target.checked)} /> Mis publicaciones
+          </label>
           <select className="bc-select" style={{ width: "auto" }} value={tag} onChange={(e) => setTag(e.target.value)} aria-label="Etiqueta">
             <option value="">Todas las etiquetas</option>
             {tags.data?.map((t) => (
@@ -82,7 +87,7 @@ export function Library() {
           <ExportButton
             baseName={query || tag || "biblioteca"}
             label="Exportar esta vista"
-            getWorks={async () => (await repo.listLibrary({ text: query || undefined, favorite, tag: tag || undefined, collectionId: collectionId || undefined, limit: 100000 })).map((e) => e.work)}
+            getWorks={async () => (await repo.listLibrary({ text: query || undefined, favorite, own, tag: tag || undefined, collectionId: collectionId || undefined, limit: 100000 })).map((e) => e.work)}
           />
         </div>
       </div>
@@ -91,7 +96,7 @@ export function Library() {
         {entries.error ? <div className="bc-alert bc-alert-error">{entries.error}</div> : null}
         {entries.data && entries.data.length === 0 ? (
           <div className="bc-empty">
-            {query || favorite || tag || collectionId ? "Ninguna publicación coincide con los filtros." : "Su biblioteca está vacía. Guarde resultados desde el Buscador o añada una referencia manual."}
+            {query || favorite || own || tag || collectionId ? "Ninguna publicación coincide con los filtros." : "Su biblioteca está vacía. Guarde resultados desde el Buscador o añada una referencia manual."}
           </div>
         ) : null}
         {entries.data?.map((e) => (
@@ -113,6 +118,14 @@ export function Library() {
             actions={
               <>
                 <FullTextButton work={e.work} />
+                <button
+                  className="bc-btn bc-btn-sm"
+                  aria-pressed={!!ownIds.data?.has(e.work.id!)}
+                  title="Marcar como publicación propia"
+                  onClick={() => act(() => repo.setOwnWork(e.work.id!, !ownIds.data?.has(e.work.id!)))}
+                >
+                  {ownIds.data?.has(e.work.id!) ? "✓ Mi publicación" : "Es mía"}
+                </button>
                 <CiteButton work={e.work} />
                 <button className="bc-btn bc-btn-sm" aria-pressed={e.favorite} onClick={() => act(() => repo.setFavorite(e.work.id!, !e.favorite))} title="Favorito">
                   <Icon name="star" size={15} filled={e.favorite} /> {e.favorite ? "Favorito" : "Marcar favorito"}

@@ -57,28 +57,6 @@ export function Statistics() {
   );
 }
 
-export function Researchers() {
-  const { identity } = useApp();
-  return (
-    <div className="bc-page">
-      <h1>Investigadores</h1>
-      <div className="bc-card" style={{ marginBottom: 16 }}>
-        <h2>Su identidad local</h2>
-        <p style={{ margin: 0 }}>{identity?.displayName}</p>
-        <p className="bc-sub mono" style={{ fontSize: "0.8rem" }}>ID {identity?.id}</p>
-      </div>
-      <Pending
-        phase={6}
-        title="Equipo de investigación"
-        items={[
-          "Invitar investigadores a proyectos con roles de administrador, editor o lector.",
-          "Llaves criptográficas por persona para verificar quién hizo cada cambio.",
-          "Historial de modificaciones por proyecto.",
-        ]}
-      />
-    </div>
-  );
-}
 
 
 export function Settings() {

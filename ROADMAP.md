@@ -10,7 +10,7 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 | 3b | Más fuentes: Crossref, PubMed, Europe PMC, DOAJ + unificación; acceso legal al texto completo | ✅ (🔎 `npm.cmd run test:live` en su PC) |
 | 4 | Exportación e importación (BibTeX, RIS, EndNote, CSV, CSL-JSON), historial, copias de seguridad | ✅ (EndNote verificado en su PC) |
 | 5 | Sincronización entre dos computadoras (eventos firmados + Syncthing) | ✅ simulada (🔎 prueba real con dos PC y Syncthing) |
-| 6 | Proyectos compartidos, invitaciones y permisos sincronizados | 🟡 lo básico ya está en la Fase 5; falta directorio de investigadores |
+| 6 | Proyectos compartidos, invitaciones, permisos, perfil con ORCID y colaboradores | ✅ (🔎 importar su propio ORCID) |
 | 7 | IA (Ollama local / API con permiso) y análisis de PDF | ⬜ |
 | 8 | Editor científico, CRDT y estilos de cita | ⬜ |
 | 9 | Estadística | ⬜ |
@@ -62,6 +62,15 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 - ✅ Pruebas: 22 nuevas con respuestas reales grabadas (verificadas con SHA-256) + 2 de interfaz; prueba en vivo de los clientes ejecutada en el navegador del usuario (4 fuentes y Unpaywall respondieron).
 - ⬜ arXiv y CORE: no permiten llamadas desde el navegador → app de Windows (Fase 10).
 - ⬜ SciELO directo: sin API JSON estable; sus revistas llegan por Crossref, DOAJ y OpenAlex.
+
+## Fase 6 — detalle
+
+- ✅ Invitaciones, roles e historial firmados (hechos en la Fase 5).
+- ✅ Mi perfil de investigador: ORCID con validación del dígito de control; nombre del registro y aviso si no coincide.
+- ✅ Importar «Mis publicaciones» desde el ORCID público (gratis, sin contraseña), completadas con coautores, resumen y citas de Crossref; sin duplicar; se actualizan cuando se quiera.
+- ✅ Marcar o desmarcar publicaciones propias desde la Biblioteca; filtro «Mis publicaciones»; exportar la lista (BibTeX, RIS, EndNote…).
+- ✅ Colaboradores: personas con las que comparte proyectos y su rol.
+- ✅ Pruebas: 5 (ORCID con respuestas reales de la cuenta de demostración oficial) + 1 (almacenamiento) + 2 de interfaz.
 
 ## Fase 5 — detalle
 

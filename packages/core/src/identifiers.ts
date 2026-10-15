@@ -54,3 +54,19 @@ export function normalizeTitle(title: string): string {
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
+
+/**
+ * ORCID: acepta "0000-0002-1825-0097", "https://orcid.org/0000-0002-1825-0097" o sin guiones.
+ * Valida el dígito de control (ISO 7064 11,2). Devuelve la forma con guiones o null.
+ */
+export function normalizeOrcid(input: string | null | undefined): string | null {
+  if (!input) return null;
+  const raw = input.trim().replace(/^https?:\/\/(www\.)?orcid\.org\//i, "").replace(/[\s-]/g, "").toUpperCase();
+  if (!/^\d{15}[\dX]$/.test(raw)) return null;
+  let total = 0;
+  for (const ch of raw.slice(0, 15)) total = (total + Number(ch)) * 2;
+  const result = (12 - (total % 11)) % 11;
+  const check = result === 10 ? "X" : String(result);
+  if (check !== raw[15]) return null;
+  return raw.match(/.{4}/g)!.join("-");
+}

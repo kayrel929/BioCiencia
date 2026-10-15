@@ -1,7 +1,7 @@
 import { normalizeArxivId, normalizeDoi, normalizeOpenAlexId, normalizePmid, normalizeTitle } from "./identifiers.ts";
 
 /** Fuentes de metadatos conocidas. "manual" = escrito o importado por el usuario. */
-export type SourceName = "openalex" | "crossref" | "pubmed" | "europepmc" | "semanticscholar" | "arxiv" | "doaj" | "manual" | "import";
+export type SourceName = "openalex" | "crossref" | "pubmed" | "europepmc" | "semanticscholar" | "arxiv" | "doaj" | "orcid" | "manual" | "import";
 
 export interface AuthorRef {
   name: string;

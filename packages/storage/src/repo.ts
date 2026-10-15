@@ -198,7 +198,7 @@ export const BACKUP_FORMAT = "biociencia-backup-1";
 export const BACKUP_TABLES = [
   "identity", "devices", "settings", "works", "work_ids", "sources_log", "searches", "search_results",
   "library_items", "tags", "projects", "collections", "collection_items", "project_members", "project_works",
-  "notes", "files", "events", "sync_peers", "sync_log", "identity_keys", "sync_events",
+  "notes", "files", "events", "sync_peers", "sync_log", "identity_keys", "sync_events", "own_works",
 ] as const;
 
 export interface Backup {
@@ -472,7 +472,7 @@ export class BioRepo {
    * Lista la biblioteca. `text` busca en título, autores, resumen, revista y palabras clave
    * con el índice de texto completo (funciona sin internet).
    */
-  async listLibrary(opts: { text?: string; favorite?: boolean; tag?: string; collectionId?: string; projectId?: string; limit?: number } = {}): Promise<LibraryEntry[]> {
+  async listLibrary(opts: { text?: string; favorite?: boolean; own?: boolean; tag?: string; collectionId?: string; projectId?: string; limit?: number } = {}): Promise<LibraryEntry[]> {
     const where: string[] = ["l.deleted = 0", "w.deleted = 0"];
     const params: SqlValue[] = [];
     const fts = opts.text ? toFtsQuery(opts.text) : null;
@@ -482,6 +482,7 @@ export class BioRepo {
       params.push(fts);
     }
     if (opts.favorite) where.push("l.favorite = 1");
+    if (opts.own) where.push("EXISTS (SELECT 1 FROM own_works o WHERE o.work_id = w.id)");
     if (opts.tag) {
       where.push("EXISTS (SELECT 1 FROM tags t WHERE t.work_id = w.id AND t.tag = ?)");
       params.push(opts.tag);
@@ -515,6 +516,78 @@ export class BioRepo {
   async libraryCount(): Promise<number> {
     const r = await this.db.all<{ n: number }>("SELECT COUNT(*) AS n FROM library_items WHERE deleted = 0");
     return Number(r[0]?.n ?? 0);
+  }
+
+  // ---------------- Publicaciones propias (ORCID) ----------------
+
+  /** Guarda las publicaciones del propio investigador: van a la biblioteca y quedan marcadas como propias. */
+  async importOwnWorks(works: (Work & { putCode?: string })[], orcid: string | null): Promise<{ created: number; merged: number; ids: string[] }> {
+    let created = 0;
+    let merged = 0;
+    const ids: string[] = [];
+    for (const w of works) {
+      const { putCode, ...work } = w;
+      const r = await this.upsertWork(work);
+      if (r.created) created++;
+      else merged++;
+      ids.push(r.id);
+      await this.addToLibrary(r.id);
+      await this.db.batch([
+        {
+          sql: `INSERT INTO own_works (work_id, orcid, put_code, origin, added_at) VALUES (?, ?, ?, 'orcid', ?)
+                ON CONFLICT(work_id) DO UPDATE SET orcid = excluded.orcid, put_code = excluded.put_code`,
+          params: [r.id, orcid, putCode ?? null, now()],
+        },
+      ]);
+    }
+    return { created, merged, ids };
+  }
+
+  async setOwnWork(workId: string, own: boolean): Promise<void> {
+    if (own) {
+      await this.addToLibrary(workId);
+      await this.db.batch([{ sql: "INSERT OR IGNORE INTO own_works (work_id, origin, added_at) VALUES (?, 'manual', ?)", params: [workId, now()] }]);
+    } else {
+      await this.db.batch([{ sql: "DELETE FROM own_works WHERE work_id = ?", params: [workId] }]);
+    }
+  }
+
+  async ownWorkIds(workIds?: string[]): Promise<Set<string>> {
+    const r = workIds
+      ? workIds.length
+        ? await this.db.all<{ work_id: string }>(`SELECT work_id FROM own_works WHERE work_id IN (${workIds.map(() => "?").join(",")})`, workIds)
+        : []
+      : await this.db.all<{ work_id: string }>("SELECT work_id FROM own_works");
+    return new Set(r.map((x) => x.work_id));
+  }
+
+  /** Publicaciones propias, de la más reciente a la más antigua. */
+  async listOwnWorks(): Promise<(Work & { origin: "orcid" | "manual" })[]> {
+    const r = await this.db.all<WorkRow & { origin: "orcid" | "manual" }>(
+      "SELECT w.*, o.origin FROM own_works o JOIN works w ON w.id = o.work_id WHERE w.deleted = 0 ORDER BY w.year DESC, w.title",
+    );
+    return r.map((x) => ({ ...rowToWork(x), origin: x.origin }));
+  }
+
+  /** Personas con las que comparto proyectos (para el directorio de investigadores). */
+  async listCollaborators(): Promise<{ memberId: string; displayName: string; projects: { id: string; name: string; role: Role }[] }[]> {
+    const me = await this.getIdentity();
+    if (!me) return [];
+    const r = await this.db.all<{ member_id: string; display_name: string; project_id: string; name: string; role: Role }>(
+      `SELECT m.member_id, m.display_name, p.id AS project_id, p.name, m.role
+       FROM project_members m JOIN projects p ON p.id = m.project_id
+       WHERE p.deleted = 0 AND m.member_id <> ?
+         AND EXISTS (SELECT 1 FROM project_members mine WHERE mine.project_id = p.id AND mine.member_id = ?)
+       ORDER BY m.display_name, p.name`,
+      [me.id, me.id],
+    );
+    const by = new Map<string, { memberId: string; displayName: string; projects: { id: string; name: string; role: Role }[] }>();
+    for (const x of r) {
+      const e = by.get(x.member_id) ?? { memberId: x.member_id, displayName: x.display_name, projects: [] };
+      e.projects.push({ id: x.project_id, name: x.name, role: x.role });
+      by.set(x.member_id, e);
+    }
+    return [...by.values()];
   }
 
   // ---------------- Colecciones ----------------

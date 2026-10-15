@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { BioRepo, Identity } from "@biociencia/storage";
-import { CrossrefClient, DoajClient, EuropePmcClient, OpenAlexClient, OpenAlexSource, PubMedClient, UnpaywallClient, type FreeSource } from "@biociencia/sources";
+import { CrossrefClient, DoajClient, EuropePmcClient, OpenAlexClient, OpenAlexSource, OrcidClient, PubMedClient, UnpaywallClient, type FreeSource } from "@biociencia/sources";
 import { SyncEngine, type SyncTransport } from "@biociencia/sync";
 
 export type Platform = "desktop" | "web";
@@ -45,6 +45,7 @@ interface AppState {
   /** Fuentes de búsqueda (OpenAlex con costo; las demás gratuitas) */
   sources: Record<SearchSourceId, FreeSource>;
   unpaywall: UnpaywallClient;
+  orcid: OrcidClient;
   /** Correo de contacto para las APIs (OpenAlex, Crossref, PubMed, Unpaywall) */
   contactEmail: string | null;
   setContactEmail: (v: string | null) => void;
@@ -71,7 +72,7 @@ export function AppProvider({
   const [contactEmail, setContactState] = useState<string | null>(null);
   const [libraryProxy, setProxyState] = useState<string | null>(null);
   const emailRef = useRef<string | null>(null);
-  const { sources, unpaywall } = useMemo(() => {
+  const { sources, unpaywall, orcid } = useMemo(() => {
     const http = (url: string, init?: RequestInit) => fetch(url, init);
     const email = () => emailRef.current;
     return {
@@ -83,6 +84,7 @@ export function AppProvider({
         doaj: new DoajClient(http),
       } satisfies Record<SearchSourceId, FreeSource>,
       unpaywall: new UnpaywallClient(http, { email }),
+      orcid: new OrcidClient(http, { mailto: email }),
     };
   }, [openalex]);
   const setContactEmail = useCallback(
@@ -136,7 +138,7 @@ export function AppProvider({
   );
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
 
-  return <Ctx.Provider value={{ repo, platform, identity, version, refresh, setIdentity, theme, setTheme, openalex, sources, unpaywall, contactEmail, setContactEmail, libraryProxy, setLibraryProxy, saveFile, sync, syncFolder }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ repo, platform, identity, version, refresh, setIdentity, theme, setTheme, openalex, sources, unpaywall, orcid, contactEmail, setContactEmail, libraryProxy, setLibraryProxy, saveFile, sync, syncFolder }}>{children}</Ctx.Provider>;
 }
 
 export function useApp(): AppState {

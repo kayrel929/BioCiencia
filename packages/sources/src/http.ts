@@ -9,6 +9,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   europepmc: "Europe PMC",
   doaj: "DOAJ",
   unpaywall: "Unpaywall",
+  orcid: "ORCID",
 };
 
 /** Error de una fuente externa, con un mensaje claro en español. */

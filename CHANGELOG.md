@@ -4,6 +4,15 @@ Formato basado en *Keep a Changelog*. Fechas en formato AAAA-MM-DD.
 
 ## [0.1.0-dev] — 2026-10-15
 
+### Fase 6: perfil de investigador con ORCID y colaboradores
+
+#### Añadido
+- Pantalla Investigadores: ORCID del usuario, importación de sus publicaciones públicas desde orcid.org, completadas con Crossref; resumen por año y citas; exportar la lista.
+- Migración 3: tabla `own_works` (publicaciones propias), incluida en la copia de seguridad.
+- Biblioteca: botón «Es mía» y filtro «Mis publicaciones».
+- Lista de colaboradores a partir de los proyectos compartidos.
+- `normalizeOrcid` con dígito de control (ISO 7064 11,2).
+
 ### Fase 3b: fuentes gratuitas y acceso legal al texto completo
 
 #### Añadido

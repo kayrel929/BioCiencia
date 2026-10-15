@@ -16,6 +16,7 @@ const SOURCE_LABEL: Record<string, string> = {
   semanticscholar: "Semantic Scholar",
   arxiv: "arXiv",
   doaj: "DOAJ",
+  orcid: "ORCID",
   manual: "Ingreso manual",
   import: "Importado",
 };

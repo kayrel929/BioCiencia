@@ -15,6 +15,10 @@ Cada archivo es la respuesta **exacta** del servidor; se verificó con SHA-256 q
 | unpaywall-bronze-php.json | Unpaywall, DOI 10.1094/php-06-23-0060-rs (bronce) | bf2b4398…9b9773247 |
 | unpaywall-closed-annurev.json | Unpaywall, DOI 10.1146/annurev-phyto-081211-173000 (cerrado) | d17b2131…b967e2f568f2 |
 | unpaywall-oa-vmi.json | Unpaywall, DOI 10.1155/vmi/4160516 (oro) | e90b8633…5884f206 |
+| orcid-personal-carberry.json | `pub.orcid.org/v3.0/0000-0002-1825-0097/personal-details` (cuenta de demostración oficial de ORCID) | 2ec2d77c…4b32744b |
+| orcid-works-carberry.json | `pub.orcid.org/v3.0/0000-0002-1825-0097/works` | dfd93ef5…5e664480 |
+| crossref-dois-2.json | Crossref `filter=doi:…,doi:…` (2 DOI) | 0d545f93…7f7dec5d |
+| crossref-dois-carberry.json | Crossref con los 6 DOI del registro de demostración | 8963224d…7e025f4e3 |
 | unpaywall-404.html | Unpaywall, DOI inexistente (404 en HTML) | e9639e3c…59b76237ab80 |
 
 ## Comportamiento comprobado en las APIs reales (2026-10-15)
@@ -28,3 +32,4 @@ Cada archivo es la respuesta **exacta** del servidor; se verificó con SHA-256 q
 - Unpaywall responde 404 en HTML (no JSON) cuando el DOI no existe.
 - SciELO no tiene una API de búsqueda JSON pública estable; sus revistas aparecen en Crossref, DOAJ y OpenAlex.
 - Verificado también: `free full text[sb]` en PubMed (14 de 35 para «Stenocarpella maydis»), `sort=CITED desc` en Europe PMC y `sort=published&order=desc` en Crossref.
+- ORCID público (`pub.orcid.org/v3.0`): permite llamadas desde el navegador, sin clave; 404 en JSON si el ORCID no existe. Crossref acepta varios `doi:` en un mismo `filter`. El filtro `orcid:` de Crossref NO es fiable (el ORCID de demostración devuelve 3550 trabajos ajenos), por eso no se usa.

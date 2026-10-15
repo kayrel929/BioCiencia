@@ -257,6 +257,20 @@ CREATE INDEX sync_events_project ON sync_events(project_id, hlc);
 CREATE INDEX sync_events_export ON sync_events(local, exported);
 `,
   },
+  {
+    version: 3,
+    name: "publicaciones-propias",
+    sql: /* sql */ `
+-- Publicaciones de la persona que usa la app (importadas de su ORCID o marcadas a mano)
+CREATE TABLE own_works (
+  work_id TEXT PRIMARY KEY REFERENCES works(id),
+  orcid TEXT,
+  put_code TEXT,
+  origin TEXT NOT NULL CHECK (origin IN ('orcid', 'manual')),
+  added_at TEXT NOT NULL
+);
+`,
+  },
 ];
 
 import type { SqlDriver, Statement } from "./driver.ts";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CrossrefClient, DoajClient, EuropePmcClient, PubMedClient, searchSources, UnpaywallClient, type HttpGet } from "@biociencia/sources";
+import { CrossrefClient, DoajClient, EuropePmcClient, OrcidClient, PubMedClient, searchSources, UnpaywallClient, type HttpGet } from "@biociencia/sources";
 
 /**
  * Pruebas EN VIVO contra las fuentes gratuitas (requieren internet; se ejecutan en su PC con
@@ -49,4 +49,15 @@ describe("fuentes gratuitas en vivo", () => {
     expect(info.isOa).toBe(true);
     expect(info.best?.url).toMatch(/^https:\/\//);
   }, 30_000);
+
+  it("ORCID público (cuenta de demostración de ORCID, o la suya con BC_ORCID)", async () => {
+    const id = process.env.BC_ORCID ?? "0000-0002-1825-0097";
+    const c = new OrcidClient(http, { mailto: () => email });
+    const p = await c.person(id);
+    expect(p.name.length).toBeGreaterThan(0);
+    const works = await c.works(id, p.name);
+    const enr = await c.enrichWithCrossref(works);
+    expect(enr.error).toBeNull();
+    console.log(`ORCID ${id}: ${p.name} · ${works.length} trabajos públicos · ${enr.enriched} completados con Crossref`);
+  }, 60_000);
 });
