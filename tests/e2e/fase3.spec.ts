@@ -55,6 +55,17 @@ test("pregunta científica → resultados reales grabados → guardar → ver si
   await expect(tpp.getByText("En su biblioteca")).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/10-resultados.png`, fullPage: false });
 
+  // Descargar la cita de un resultado directamente para EndNote (sin guardarlo antes)
+  const [enw] = await Promise.all([page.waitForEvent("download"), tpp.getByLabel("Descargar cita").selectOption("enw")]);
+  expect(enw.suggestedFilename()).toMatch(/\.enw$/);
+  const enwText = readFileSync((await enw.path())!, "utf8");
+  expect(enwText).toMatch(/^%0 Journal Article/);
+  expect(enwText).toContain("%J Tropical Plant Pathology");
+  // Exportar todos los resultados de la página
+  await page.getByLabel("Formato de exportación").selectOption("ris");
+  const [ris] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Exportar estos resultados" }).click()]);
+  expect(readFileSync((await ris.path())!, "utf8").match(/^TY {2}- /gm)).toHaveLength(5);
+
   // Filtros: año, acceso abierto, tipo e idioma llegan a la consulta
   await page.getByRole("button", { name: /^Filtros/ }).click();
   await page.getByLabel("Año desde").fill("2010");

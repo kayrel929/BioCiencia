@@ -55,6 +55,43 @@ export function ExportButton({ getWorks, baseName, label = "Exportar" }: { getWo
   );
 }
 
+/**
+ * Descargar la cita de UNA publicación en el formato elegido (EndNote, RIS, BibTeX…).
+ * Al abrir el archivo .enw o .ris con doble clic, EndNote/Zotero lo importan.
+ */
+export function CiteButton({ work }: { work: Work }) {
+  const { saveFile } = useApp();
+  const [msg, setMsg] = useState<string | null>(null);
+  const first = work.authors[0]?.name ?? "";
+  const surname = first.includes(",") ? first.split(",")[0]! : first.split(" ").slice(-1)[0] ?? "";
+  const base = slug(`${surname || work.title.split(" ").slice(0, 3).join(" ")} ${work.year ?? ""}`);
+  return (
+    <span className="bc-row" style={{ gap: 4, display: "inline-flex" }}>
+      <select
+        className="bc-select bc-btn-sm"
+        style={{ width: "auto" }}
+        aria-label="Descargar cita"
+        value=""
+        onChange={async (e) => {
+          const f = EXPORT_FORMATS.find((x) => x.id === e.target.value);
+          e.target.value = "";
+          if (!f) return;
+          try {
+            const ok = await saveFile(`${base}.${f.ext}`, f.fn([work]), f.mime);
+            setMsg(ok ? "Cita descargada" : null);
+          } catch (err) {
+            setMsg(`No se pudo descargar: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        }}
+      >
+        <option value="">Descargar cita…</option>
+        {EXPORT_FORMATS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+      </select>
+      {msg ? <span className="bc-sub" role="status" style={{ fontSize: "0.8rem" }}>{msg}</span> : null}
+    </span>
+  );
+}
+
 /** Importar archivos de Zotero, Mendeley, EndNote o JabRef a la biblioteca. */
 export function ImportDialog({ onClose }: { onClose: () => void }) {
   const { repo, refresh } = useApp();

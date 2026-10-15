@@ -8,6 +8,7 @@ import {
 import { useApp, useAsync } from "../context.tsx";
 import { Icon } from "../components/Icon.tsx";
 import { WorkItem } from "../components/WorkItem.tsx";
+import { CiteButton, ExportButton } from "../components/RefsIO.tsx";
 
 const LANGUAGES: Record<string, string> = { es: "Español", en: "Inglés", pt: "Portugués", fr: "Francés", de: "Alemán" };
 const MODES: { value: SearchMode; label: string; placeholder: string }[] = [
@@ -324,6 +325,11 @@ export function Search() {
               OpenAlex busca por palabras; se envió: <code>{run.sentText}</code>
             </p>
           ) : null}
+          {run.rows.length ? (
+            <div style={{ marginTop: 8 }}>
+              <ExportButton label="Exportar estos resultados" baseName={`busqueda ${run.sentText ?? ""}`} getWorks={async () => run.rows.map((r) => r.work)} />
+            </div>
+          ) : null}
           {run.rows.length === 0 ? <p className="bc-empty">Sin resultados con estos criterios.</p> : null}
           {run.rows.map((row) => (
             <WorkItem
@@ -331,6 +337,7 @@ export function Search() {
               work={row.work}
               actions={
                 <>
+                  <CiteButton work={row.work} />
                   {inLibrary.has(row.id) ? (
                     <span className="bc-badge bc-badge-green">En su biblioteca</span>
                   ) : (

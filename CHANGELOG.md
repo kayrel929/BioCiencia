@@ -2,7 +2,13 @@
 
 Formato basado en *Keep a Changelog*. Fechas en formato AAAA-MM-DD.
 
-## [0.1.0-dev] — 2026-10-14
+## [0.1.0-dev] — 2026-10-15
+
+### Mejoras tras la prueba en la PC del usuario
+- Verificado en Windows con Node 24.21: 86 pruebas aprobadas y búsqueda real en OpenAlex desde la versión web.
+- Nuevo: «Descargar cita…» en cada resultado del buscador y de la biblioteca (EndNote .enw/XML, RIS, BibTeX, CSV, CSL-JSON), sin necesidad de guardarlo antes.
+- Nuevo: «Exportar estos resultados» en el buscador.
+
 
 ### Fase 5: sincronización entre computadoras
 

@@ -3,7 +3,7 @@ import { useApp, useAsync } from "../context.tsx";
 import { Icon } from "../components/Icon.tsx";
 import { WorkItem } from "../components/WorkItem.tsx";
 import { ManualWorkForm } from "../components/ManualWorkForm.tsx";
-import { ExportButton, ImportDialog } from "../components/RefsIO.tsx";
+import { CiteButton, ExportButton, ImportDialog } from "../components/RefsIO.tsx";
 import { Dialog } from "../components/Pending.tsx";
 import type { LibraryEntry } from "@biociencia/storage";
 
@@ -111,6 +111,7 @@ export function Library() {
             }
             actions={
               <>
+                <CiteButton work={e.work} />
                 <button className="bc-btn bc-btn-sm" aria-pressed={e.favorite} onClick={() => act(() => repo.setFavorite(e.work.id!, !e.favorite))} title="Favorito">
                   <Icon name="star" size={15} filled={e.favorite} /> {e.favorite ? "Favorito" : "Marcar favorito"}
                 </button>
