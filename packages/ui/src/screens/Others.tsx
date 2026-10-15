@@ -39,23 +39,6 @@ export function Editor() {
   );
 }
 
-export function Statistics() {
-  return (
-    <div className="bc-page">
-      <h1>Estadística</h1>
-      <Pending
-        phase={9}
-        title="Análisis de datos experimentales"
-        items={[
-          "Importación de CSV y XLSX conservando los datos originales.",
-          "Descriptiva, intervalos de confianza, ANOVA y comparación de medias con verificación de supuestos.",
-          "Incidencia, severidad y AUDPC.",
-          "Gráficos y tablas exportables.",
-        ]}
-      />
-    </div>
-  );
-}
 
 
 

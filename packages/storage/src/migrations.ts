@@ -271,6 +271,21 @@ CREATE TABLE own_works (
 );
 `,
   },
+  {
+    version: 4,
+    name: "conjuntos-de-datos",
+    sql: /* sql */ `
+-- Datos de experimentos para el módulo de estadística (texto tal como se pegó o importó)
+CREATE TABLE datasets (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  project_id TEXT REFERENCES projects(id),
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+`,
+  },
 ];
 
 import type { SqlDriver, Statement } from "./driver.ts";

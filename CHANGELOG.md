@@ -4,6 +4,13 @@ Formato basado en *Keep a Changelog*. Fechas en formato AAAA-MM-DD.
 
 ## [0.1.0-dev] — 2026-10-15
 
+### Fase 9: estadística
+
+#### Añadido
+- Pantalla Estadística: datos desde Excel/CSV, análisis descriptivo, t, ANOVA (DCA, DBCA, factorial) con Tukey y letras, supuestos, Kruskal-Wallis, correlación/regresión y χ²; interpretación y exportación CSV.
+- Paquete `@biociencia/stats` (sin dependencias) verificado contra SciPy y statsmodels.
+- Migración 4: tabla `datasets`, incluida en la copia de seguridad.
+
 ### Fase 6: perfil de investigador con ORCID y colaboradores
 
 #### Añadido

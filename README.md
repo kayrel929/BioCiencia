@@ -9,7 +9,7 @@ P2P entre computadoras, asistente de IA con referencias verificables, editor de
 manuscritos y estadística. Funciona en **Windows** (Tauri) y en el **navegador** (PWA),
 con el mismo código.
 
-> Estado: **v0.1.0 en desarrollo — Fases 2 a 6 completadas** (la sincronización falta probarla con dos PC reales). Ver [ROADMAP.md](ROADMAP.md).
+> Estado: **v0.1.0 en desarrollo — Fases 2 a 6 y 9 completadas** (la sincronización falta probarla con dos PC reales). Ver [ROADMAP.md](ROADMAP.md).
 
 ## Qué funciona hoy
 
@@ -31,7 +31,9 @@ con el mismo código.
 - Perfil con ORCID: importa sus publicaciones como «Mis publicaciones»; colaboradores de sus proyectos.
 - «¿Dónde leerlo?»: copias legales gratuitas (Unpaywall), acceso institucional, pedir al autor, Google Académico.
 
-**Todavía no** (pantallas marcadas «Pendiente · Fase N»): IA y PDF (Fase 7), editor (Fase 8), estadística (Fase 9).
+- Estadística para experimentos: ANOVA DCA/DBCA/factorial con Tukey y letras, t, supuestos, correlación, χ².
+
+**Todavía no** (pantallas marcadas «Pendiente · Fase N»): IA y PDF (Fase 7), editor (Fase 8).
 
 Sincronización (cómo funciona y cómo probarla en dos PC): [docs/SINCRONIZACION.md](docs/SINCRONIZACION.md).
 
@@ -63,6 +65,7 @@ Instalador de Windows: ver [docs/INSTALACION-WINDOWS.md](docs/INSTALACION-WINDOW
 packages/core      Identificadores, DOI, duplicados, reloj HLC (TypeScript)
 packages/sources   Clientes de fuentes científicas (OpenAlex)
 packages/storage   Esquema SQL, migraciones y repositorio (mismo SQL en Windows y web)
+packages/stats     Estadística verificada contra SciPy (sin dependencias)
 packages/sync      Firmas Ed25519, eventos, reproducción con permisos, motor de sincronización
 packages/ui        Interfaz React (pantallas, componentes, estilos)
 apps/web           Versión web/PWA: SQLite WebAssembly en OPFS

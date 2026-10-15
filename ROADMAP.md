@@ -13,7 +13,7 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 | 6 | Proyectos compartidos, invitaciones, permisos, perfil con ORCID y colaboradores | ✅ (🔎 importar su propio ORCID) |
 | 7 | IA (Ollama local / API con permiso) y análisis de PDF | ⬜ |
 | 8 | Editor científico, CRDT y estilos de cita | ⬜ |
-| 9 | Estadística | ⬜ |
+| 9 | Estadística (descriptiva, t, ANOVA DCA/DBCA/factorial, Tukey, supuestos, no paramétricas, correlación, χ²) | ✅ verificada contra SciPy/statsmodels |
 | 10 | Instalador Windows firmado y PWA publicada | ⬜ |
 | 11 | Pruebas de seguridad, integración y rendimiento | ⬜ |
 | 12 | Documentación y despliegue para el grupo | ⬜ |
@@ -62,6 +62,14 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 - ✅ Pruebas: 22 nuevas con respuestas reales grabadas (verificadas con SHA-256) + 2 de interfaz; prueba en vivo de los clientes ejecutada en el navegador del usuario (4 fuentes y Unpaywall respondieron).
 - ⬜ arXiv y CORE: no permiten llamadas desde el navegador → app de Windows (Fase 10).
 - ⬜ SciELO directo: sin API JSON estable; sus revistas llegan por Crossref, DOAJ y OpenAlex.
+
+## Fase 9 — detalle
+
+- ✅ Paquete `@biociencia/stats` sin dependencias: distribuciones normal, t, F, χ² y rango studentizado (algoritmo de R).
+- ✅ Descriptiva (media, DE, EE, CV, cuartiles, IC 95 %), t de Welch/Student/pareada, ANOVA DCA, DBCA y factorial A×B, Tukey HSD con letras, Levene, Shapiro-Wilk, Kruskal-Wallis, Pearson, Spearman, regresión lineal, χ².
+- ✅ Datos pegados desde Excel (tabulador, punto y coma, coma decimal) o CSV; filas incompletas se omiten y se avisa; conjuntos de datos guardados (migración 4).
+- ✅ Interpretación en español, supuestos del ANOVA, exportación de resultados a CSV.
+- ✅ Verificación: 22 pruebas contra valores de SciPy 1.18 y statsmodels 0.15 (script reproducible en `packages/stats/tests/ref`), incluido el conjunto clásico PlantGrowth; 2 pruebas de interfaz.
 
 ## Fase 6 — detalle
 

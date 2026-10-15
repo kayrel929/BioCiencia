@@ -198,7 +198,7 @@ export const BACKUP_FORMAT = "biociencia-backup-1";
 export const BACKUP_TABLES = [
   "identity", "devices", "settings", "works", "work_ids", "sources_log", "searches", "search_results",
   "library_items", "tags", "projects", "collections", "collection_items", "project_members", "project_works",
-  "notes", "files", "events", "sync_peers", "sync_log", "identity_keys", "sync_events", "own_works",
+  "notes", "files", "events", "sync_peers", "sync_log", "identity_keys", "sync_events", "own_works", "datasets",
 ] as const;
 
 export interface Backup {
@@ -588,6 +588,38 @@ export class BioRepo {
       by.set(x.member_id, e);
     }
     return [...by.values()];
+  }
+
+  // ---------------- Conjuntos de datos (estadística) ----------------
+
+  async saveDataset(input: { id?: string; name: string; content: string; projectId?: string | null }): Promise<string> {
+    if (!input.name.trim()) throw new Error("El conjunto de datos necesita un nombre");
+    const id = input.id ?? ulid();
+    const t = now();
+    await this.db.batch([
+      {
+        sql: `INSERT INTO datasets (id, name, project_id, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET name = excluded.name, project_id = excluded.project_id, content = excluded.content, updated_at = excluded.updated_at`,
+        params: [id, input.name.trim(), input.projectId ?? null, input.content, t, t],
+      },
+    ]);
+    return id;
+  }
+
+  async listDatasets(): Promise<{ id: string; name: string; projectId: string | null; updatedAt: string; size: number }[]> {
+    const r = await this.db.all<{ id: string; name: string; project_id: string | null; updated_at: string; size: number }>(
+      "SELECT id, name, project_id, updated_at, length(content) AS size FROM datasets ORDER BY updated_at DESC",
+    );
+    return r.map((x) => ({ id: x.id, name: x.name, projectId: x.project_id, updatedAt: x.updated_at, size: Number(x.size) }));
+  }
+
+  async getDataset(id: string): Promise<{ id: string; name: string; projectId: string | null; content: string } | null> {
+    const r = await this.db.all<{ id: string; name: string; project_id: string | null; content: string }>("SELECT * FROM datasets WHERE id = ?", [id]);
+    return r[0] ? { id: r[0].id, name: r[0].name, projectId: r[0].project_id, content: r[0].content } : null;
+  }
+
+  async deleteDataset(id: string): Promise<void> {
+    await this.db.batch([{ sql: "DELETE FROM datasets WHERE id = ?", params: [id] }]);
   }
 
   // ---------------- Colecciones ----------------

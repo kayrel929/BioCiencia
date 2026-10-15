@@ -9,7 +9,8 @@ import { Home } from "./screens/Home.tsx";
 import { Search } from "./screens/Search.tsx";
 import { Library } from "./screens/Library.tsx";
 import { ProjectDetail, Projects } from "./screens/Projects.tsx";
-import { Analysis, Editor, Settings, Statistics } from "./screens/Others.tsx";
+import { Analysis, Editor, Settings } from "./screens/Others.tsx";
+import { Statistics } from "./screens/Statistics.tsx";
 import { Researchers } from "./screens/Researchers.tsx";
 import { AutoSync, SyncScreen } from "./screens/Sync.tsx";
 
@@ -28,7 +29,7 @@ const NAV: { group: string; items: { to: string; label: string; icon: string; ph
       { to: "/biblioteca", label: "Biblioteca", icon: "library" },
       { to: "/proyectos", label: "Proyectos", icon: "project" },
       { to: "/editor", label: "Editor científico", icon: "editor", phase: 8 },
-      { to: "/estadistica", label: "Estadística", icon: "stats", phase: 9 },
+      { to: "/estadistica", label: "Estadística", icon: "stats" },
     ],
   },
   {
