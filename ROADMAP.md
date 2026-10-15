@@ -7,7 +7,7 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 | 1 | Análisis de Consensus con REA y arquitectura | ✅ |
 | 2 | Estructura, interfaz, navegación y base de datos local | ✅ (web verificada en su PC; 🔎 app Windows) |
 | 3 | Búsqueda científica real con OpenAlex | ✅ verificada en su PC |
-| 3b | Más fuentes: Crossref, PubMed, Europe PMC, DOAJ + unificación; acceso legal al texto completo | ✅ (🔎 `npm.cmd run test:live` en su PC) |
+| 3b | Más fuentes: Crossref, PubMed, Europe PMC, DOAJ + unificación; acceso legal al texto completo | ✅ verificada en su PC |
 | 4 | Exportación e importación (BibTeX, RIS, EndNote, CSV, CSL-JSON), historial, copias de seguridad | ✅ (EndNote verificado en su PC) |
 | 5 | Sincronización entre dos computadoras (eventos firmados + Syncthing) | ✅ simulada (🔎 prueba real con dos PC y Syncthing) |
 | 6 | Proyectos compartidos, invitaciones, permisos, perfil con ORCID y colaboradores | ✅ (🔎 importar su propio ORCID) |
@@ -89,6 +89,7 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 - Windows + Node 24.21: `npm test` → 86 pruebas aprobadas.
 - Versión web (`npm run dev:web`): búsqueda real en OpenAlex («Ralstonia solanacearum», 27.711 resultados, costo 0,001 USD).
 - Cita descargada en formato EndNote (.enw) se abre correctamente en EndNote.
+- `npm.cmd run test:live`: OpenAlex (3 pruebas), Crossref, PubMed, Europe PMC, DOAJ, búsqueda combinada y Unpaywall aprobadas en vivo. La prueba de ORCID rechazó correctamente el número de ejemplo 0000-0000-0000-0000 (dígito de control inválido); falta repetirla con un ORCID real.
 
 ## Pendientes conocidos
 
