@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { normalizeOrcid } from "@biociencia/core";
-import type { OrcidPerson } from "@biociencia/sources";
+import { collapseSameWork, type OrcidPerson } from "@biociencia/sources";
 import { useApp, useAsync } from "../context.tsx";
 import { WorkItem } from "../components/WorkItem.tsx";
 import { CiteButton, ExportButton } from "../components/RefsIO.tsx";
@@ -47,7 +47,8 @@ export function Researchers() {
     try {
       const p = person ?? (await orcid.person(id));
       setPerson(p);
-      const list = await orcid.works(id, p.name);
+      const raw = await orcid.works(id, p.name);
+      const { works: list, collapsed } = collapseSameWork(raw);
       if (list.length === 0) {
         setMsg({ text: "Su registro ORCID no tiene publicaciones públicas. Puede agregarlas en orcid.org o marcarlas como propias desde la Biblioteca." });
         return;
@@ -56,7 +57,11 @@ export function Researchers() {
       const r = await repo.importOwnWorks(enr.works, id);
       await repo.setSetting("my_orcid_synced_at", new Date().toISOString());
       setMsg({
-        text: `${list.length} publicación(es) de su ORCID: ${r.created} nueva(s), ${r.merged} ya estaban en su biblioteca. ${enr.enriched} completada(s) con coautores y resumen de Crossref.${enr.error ? ` Crossref no respondió: ${enr.error} (se guardaron los datos de ORCID).` : ""}`,
+        text: `${list.length} publicación(es) de su ORCID: ${r.created} nueva(s), ${r.merged} ya estaban en su biblioteca. ${enr.enriched} completada(s) con coautores y resumen de Crossref.${enr.error ? ` Crossref no respondió: ${enr.error} (se guardaron los datos de ORCID).` : ""}${
+          collapsed.length
+            ? ` Se unieron ${collapsed.reduce((a, c) => a + c.dropped.length, 0)} entrada(s) repetida(s) con DOI distinto (mismo título y año): ${collapsed.map((c) => `«${c.kept.title.slice(0, 60)}» (${[c.kept.doi, ...c.dropped.map((d) => d.doi)].filter(Boolean).join(", ")})`).join("; ")}.`
+            : ""
+        }`,
       });
       refresh();
     } catch (e) {

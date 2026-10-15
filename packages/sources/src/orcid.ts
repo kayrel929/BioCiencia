@@ -1,4 +1,4 @@
-import { normalizeDoi, normalizeOrcid, normalizePmid, type Work } from "@biociencia/core";
+import { normalizeDoi, normalizeOrcid, normalizePmid, normalizeTitle, type Work } from "@biociencia/core";
 import { CROSSREF_BASE, CROSSREF_SELECT, parseCrossrefWork } from "./crossref.ts";
 import { getText, parseJson, SourceError, stripTags } from "./http.ts";
 import type { HttpGet } from "./openalex.ts";
@@ -69,6 +69,26 @@ export function parseOrcidWorks(body: any, ownerName: string, orcid: string, fet
     });
   }
   return out;
+}
+
+/**
+ * Una misma publicación puede figurar varias veces en ORCID con DOI distintos (p. ej. cuando la
+ * revista cambió de prefijo DOI). Se une por título y año: queda la primera y se informa cuántas se unieron.
+ */
+export function collapseSameWork<T extends Work>(works: T[]): { works: T[]; collapsed: { kept: T; dropped: T[] }[] } {
+  const by = new Map<string, { kept: T; dropped: T[] }>();
+  const order: string[] = [];
+  for (const w of works) {
+    const key = `${normalizeTitle(w.title)}|${w.year ?? ""}`;
+    const e = by.get(key);
+    if (e) e.dropped.push(w);
+    else {
+      by.set(key, { kept: w, dropped: [] });
+      order.push(key);
+    }
+  }
+  const groups = order.map((k) => by.get(k)!);
+  return { works: groups.map((g) => g.kept), collapsed: groups.filter((g) => g.dropped.length) };
 }
 
 export class OrcidClient {

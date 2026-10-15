@@ -12,6 +12,7 @@ Formato basado en *Keep a Changelog*. Fechas en formato AAAA-MM-DD.
 - Biblioteca: botón «Es mía» y filtro «Mis publicaciones».
 - Lista de colaboradores a partir de los proyectos compartidos.
 - `normalizeOrcid` con dígito de control (ISO 7064 11,2).
+- Al importar desde ORCID se unen las entradas repetidas con DOI distinto (mismo título y año), caso encontrado en un registro real (artículo de Bionatura con tres prefijos DOI).
 
 ### Fase 3b: fuentes gratuitas y acceso legal al texto completo
 

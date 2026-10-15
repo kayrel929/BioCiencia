@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { normalizeOrcid } from "@biociencia/core";
-import { OrcidClient, parseOrcidWorks, SourceError, type HttpGet } from "../src/index.ts";
+import { collapseSameWork, OrcidClient, parseOrcidWorks, SourceError, type HttpGet } from "../src/index.ts";
 
 /**
  * Respuestas reales de pub.orcid.org grabadas el 2026-10-15. 0000-0002-1825-0097 es
@@ -87,5 +87,21 @@ describe("ORCID", () => {
     expect(r.enriched).toBe(0);
     expect(r.error).toBe("Crossref respondió con un error (503).");
     expect(r.works).toEqual(own);
+  });
+
+  it("une la misma publicación registrada con DOI distintos (mismo título y año)", () => {
+    // Caso real observado en un registro ORCID: un artículo de Bionatura con tres prefijos DOI
+    const base = { authors: [{ name: "C" }], year: 2024, source: "orcid" as const, fetchedAt: "x" };
+    const t = "In vitro evaluation of the inhibitory capacity of three Trichoderma isolates on Ralstonia";
+    const r = collapseSameWork([
+      { ...base, title: t, doi: "10.21931/rb/2024.09.01.6" },
+      { ...base, title: t.toUpperCase(), doi: "10.21931/bj/2024.01.01.6" },
+      { ...base, title: t, doi: "10.70099/bj/2024.01.01.14" },
+      { ...base, title: "Otro artículo", doi: "10.1234/otro" },
+      { ...base, title: t, year: 2025, doi: "10.1234/version-2025" },
+    ]);
+    expect(r.works.map((w) => w.doi)).toEqual(["10.21931/rb/2024.09.01.6", "10.1234/otro", "10.1234/version-2025"]);
+    expect(r.collapsed).toHaveLength(1);
+    expect(r.collapsed[0]!.dropped.map((d) => d.doi)).toEqual(["10.21931/bj/2024.01.01.6", "10.70099/bj/2024.01.01.14"]);
   });
 });
