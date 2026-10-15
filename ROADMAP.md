@@ -5,10 +5,10 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 | Fase | Contenido | Estado |
 | --- | --- | --- |
 | 1 | Análisis de Consensus con REA y arquitectura | ✅ |
-| 2 | Estructura, interfaz, navegación y base de datos local | ✅ (🔎 abrir en Windows) |
-| 3 | Búsqueda científica real con OpenAlex | ✅ (🔎 `npm run test:live` en su PC) |
+| 2 | Estructura, interfaz, navegación y base de datos local | ✅ (web verificada en su PC; 🔎 app Windows) |
+| 3 | Búsqueda científica real con OpenAlex | ✅ verificada en su PC |
 | 3b | Más fuentes: Crossref, PubMed, Europe PMC, arXiv, DOAJ + unificación | ⬜ |
-| 4 | Exportación e importación (BibTeX, RIS, EndNote, CSV, CSL-JSON), historial, copias de seguridad | ✅ (🔎 abrir los archivos en Zotero/EndNote) |
+| 4 | Exportación e importación (BibTeX, RIS, EndNote, CSV, CSL-JSON), historial, copias de seguridad | ✅ (EndNote verificado en su PC) |
 | 5 | Sincronización entre dos computadoras (eventos firmados + Syncthing) | ✅ simulada (🔎 prueba real con dos PC y Syncthing) |
 | 6 | Proyectos compartidos, invitaciones y permisos sincronizados | 🟡 lo básico ya está en la Fase 5; falta directorio de investigadores |
 | 7 | IA (Ollama local / API con permiso) y análisis de PDF | ⬜ |
@@ -62,6 +62,12 @@ Leyenda: ✅ terminado y probado · 🟡 en curso · ⬜ pendiente · 🔎 requi
 - ✅ Interfaz: compartir proyecto, invitar por código, cambiar rol, retirar, historial de cambios, pantalla de sincronización con registro y modo automático.
 - ✅ Pruebas: 14 de dos/tres nodos simulados + 3 de firmas (Vitest), 2 en Rust, 1 de interfaz con dos navegadores.
 - 🔎 Prueba con dos PC Windows reales y Syncthing: pasos en `docs/SINCRONIZACION.md`.
+
+## Verificado en la PC del usuario (2026-10-15)
+
+- Windows + Node 24.21: `npm test` → 86 pruebas aprobadas.
+- Versión web (`npm run dev:web`): búsqueda real en OpenAlex («Ralstonia solanacearum», 27.711 resultados, costo 0,001 USD).
+- Cita descargada en formato EndNote (.enw) se abre correctamente en EndNote.
 
 ## Pendientes conocidos
 
