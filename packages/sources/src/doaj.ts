@@ -32,9 +32,12 @@ export function parseDoajWork(r: any, fetchedAt: string): Work {
     authors,
     year: b.year ? Number(b.year) : null,
     venue: b.journal?.title ?? null,
+    volume: b.journal?.volume ?? null,
+    issue: b.journal?.number ?? null,
+    pages: b.start_page ? (b.end_page ? `${b.start_page}-${b.end_page}` : b.start_page) : null,
     doi,
     abstract: stripTags(b.abstract) || null,
-    keywords: b.keywords ?? [],
+    keywords: (b.keywords ?? []).filter((k: unknown): k is string => typeof k === "string"),
     type: "article",
     citedByCount: null,
     // DOAJ solo indexa revistas de acceso abierto

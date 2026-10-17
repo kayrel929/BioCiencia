@@ -2,10 +2,10 @@ import { appendFileSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFi
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { Work } from "@biociencia/core";
+import { ulid, type Work } from "@biociencia/core";
 import { BioRepo } from "@biociencia/storage";
 import { createNodeDriver } from "@biociencia/storage/node";
-import { decodeResearcherCode, replayProject, signEvent, SyncEngine, type SyncEvent } from "@biociencia/sync";
+import { decodeResearcherCode, projectBoundTo, replayProject, signEvent, SyncEngine, type SyncEvent } from "@biociencia/sync";
 import { FolderTransport } from "@biociencia/sync/node";
 
 /**
@@ -182,6 +182,51 @@ describe("sincronización entre dos nodos simulados", () => {
     expect(r.fresh).toBe(0);
     expect(await b.repo.myRole(pid)).toBe("editor");
     expect((await b.repo.getProject(pid))?.name).toBe("Diplodia en Orellana");
+  });
+
+  it("un lector no puede apropiarse del proyecto con una «creación» antedatada (Fase 11)", async () => {
+    const a = await node("Christopher");
+    const b = await node("Ana");
+    const pid = await sharedProject(a, b, "reader");
+    const kb = (await b.repo.getKeys())!;
+    expect(projectBoundTo(pid, (await a.repo.getKeys())!.publicKey)).toBe(true);
+    const meB = (await b.repo.getIdentity())!;
+    const meA = (await a.repo.getIdentity())!;
+    // Ana escribe directamente en su archivo de la carpeta eventos firmados con SU llave, con fecha anterior
+    const base = { v: 1 as const, project: pid, author: meB.id, authorKey: kb.publicKey, device: meB.deviceId };
+    const hlc = (n: number) => `${String(n).padStart(13, "0")}-00000-${meB.deviceId}`;
+    const forged = [
+      await signEvent({ ...base, id: ulid(1), hlc: hlc(1), type: "project.create", data: { name: "Proyecto robado", description: "", objectives: "", ownerName: "Ana" } }, kb.secretKey),
+      await signEvent({ ...base, id: ulid(2), hlc: hlc(2), type: "member.remove", data: { memberId: meA.id } }, kb.secretKey),
+    ];
+    appendFileSync(join(folder, pid, `${meB.deviceId}.ndjson`), forged.map((e) => JSON.stringify(e)).join("\n") + "\n");
+
+    for (const n of [a, b]) {
+      await n.engine.syncNow(n.t);
+      const st = await n.engine.projectState(pid);
+      expect(st?.name).toBe("Diplodia en Orellana");
+      expect(st?.ownerId).toBe(meA.id);
+      expect(st?.members.find((m) => m.memberId === meB.id)?.role).toBe("reader");
+    }
+    const h = await a.engine.history(pid);
+    expect(h.rejected.map((r) => r.reason)).toContain("Creación falsa: el identificador del proyecto pertenece a otra llave");
+  });
+
+  it("un proyecto creado antes de la Fase 11 recibe un identificador ligado a la llave al compartirlo", async () => {
+    const a = await node("Christopher");
+    a.engine.detach(); // simula un proyecto creado en una versión anterior (sin llave)
+    const old = await a.repo.createProject({ name: "Proyecto antiguo" });
+    const w = await a.repo.upsertWork(petatan);
+    await a.repo.addWorkToProject(old, w.id);
+    await a.repo.addNote("project", old, "nota del proyecto");
+    await a.engine.attach();
+    const pid = await a.engine.shareProject(old);
+    expect(pid).not.toBe(old);
+    expect(projectBoundTo(pid, (await a.repo.getKeys())!.publicKey)).toBe(true);
+    expect(await a.repo.getProject(old)).toBeNull();
+    expect((await a.repo.listProjectWorks(pid)).map((x) => x.doi)).toEqual(["10.3390/ijms12095522"]);
+    expect((await a.repo.listNotes("project", pid)).map((n) => n.body)).toEqual(["nota del proyecto"]);
+    expect(await a.repo.myRole(pid)).toBe("admin");
   });
 
   it("quien no es miembro no ve el proyecto aunque reciba la carpeta", async () => {

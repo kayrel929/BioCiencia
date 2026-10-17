@@ -3,116 +3,99 @@
 **Plataforma Inteligente de Investigación Científica Colaborativa**
 *La ciencia conectada, el conocimiento compartido.*
 
-BioCiencia es una aplicación local-first para investigadores: búsqueda científica,
-biblioteca personal, proyectos de investigación y, en próximas fases, sincronización
-P2P entre computadoras, asistente de IA con referencias verificables, editor de
-manuscritos y estadística. Funciona en **Windows** (Tauri) y en el **navegador** (PWA),
-con el mismo código.
+Aplicación local-first para investigadores: búsqueda científica gratuita en varias bases de datos, biblioteca,
+revisión de literatura con PRISMA, red de citas, proyectos compartidos entre computadoras con cambios firmados,
+PDF con subrayados, bibliografías en más de 10 000 estilos de revista, estadística para experimentos, perfil ORCID con índice h y un
+asistente de IA cuyas citas se verifican. Funciona en el **navegador** (PWA) y como **app de Windows** (Tauri),
+con el mismo código. Los datos se guardan en la computadora del usuario; no hay servidor central.
 
-> Estado: **v0.1.0 en desarrollo — Fases 2 a 6 y 9 completadas** (la sincronización falta probarla con dos PC reales). Ver [ROADMAP.md](ROADMAP.md).
+> **Estado: versión 1.2.** Todas las funciones están construidas y probadas automáticamente (también el instalador, con Wine).
+> Quedan pruebas que solo se pueden hacer en la PC del usuario (ver «Pendiente de verificar» en [ROADMAP.md](ROADMAP.md)).
 
-## Qué funciona hoy
+## Para usar (Windows)
 
-- Identidad local (sin servidor).
-- Biblioteca personal en SQLite: referencias manuales, favoritos, etiquetas,
-  observaciones, colecciones y búsqueda de texto completo sin acentos, sin internet.
-- Detección de duplicados por DOI (en cualquier formato), PMID, OpenAlex, arXiv
-  o, en último caso, título + año + primer autor.
-- Proyectos: nombre, descripción, objetivos, participantes con rol, notas y bibliografía.
-- Permisos: solo los miembros ven un proyecto; los lectores no pueden editar.
-- Interfaz propia con 11 pantallas, modo claro/oscuro y diseño adaptable a teléfono.
-- Búsqueda científica real en OpenAlex: preguntas, palabras clave, título, autor (sin homónimos), revista o DOI; filtros por año, tipo, área, idioma, citas y acceso abierto; orden por relevancia, citas o fecha.
-- Historial de búsquedas que se puede abrir sin internet ni costo; guardar resultados en la biblioteca o en un proyecto.
-- Exportar referencias a BibTeX, RIS, EndNote (.enw y XML), CSV y CSL-JSON; importar desde Zotero, Mendeley, EndNote o JabRef sin duplicar.
-- Copias de seguridad completas y restauración (también para pasar datos entre web y Windows).
-- Proyectos compartidos entre computadoras: invitación por código, roles, cambios firmados, historial y conflictos resueltos sin perder datos.
+**Instalador:** doble clic en `BioCiencia-1.2.0-instalador.exe` (se construye con `scripts/instalador-windows.sh`). Si Windows avisa
+«Windows protegió su PC»: «Más información» → «Ejecutar de todas formas». No necesita Node.js ni permisos de administrador;
+BioCiencia queda en el escritorio y en el menú Inicio, y se cierra desde su ícono junto al reloj.
 
-- Búsqueda gratuita en Europe PMC, PubMed, Crossref y DOAJ a la vez (OpenAlex opcional), sin repetidos.
-- Perfil con ORCID: importa sus publicaciones como «Mis publicaciones»; colaboradores de sus proyectos.
-- «¿Dónde leerlo?»: copias legales gratuitas (Unpaywall), acceso institucional, pedir al autor, Google Académico.
+**Sin instalar:** con Node.js 22+, copie la carpeta a `C:\BioCiencia` y haga doble clic en «Iniciar BioCiencia.cmd».
 
-- Estadística para experimentos: ANOVA DCA/DBCA/factorial con Tukey y letras, t, supuestos, correlación, χ².
+Guía completa (también dentro de la app, menú **Ayuda**): [docs/GUIA_USUARIO.md](docs/GUIA_USUARIO.md).
 
-**Todavía no** (pantallas marcadas «Pendiente · Fase N»): IA y PDF (Fase 7), editor (Fase 8).
+## Funciones
 
-Sincronización (cómo funciona y cómo probarla en dos PC): [docs/SINCRONIZACION.md](docs/SINCRONIZACION.md).
+| Módulo | Qué hace |
+| --- | --- |
+| Buscador | Europe PMC, PubMed, Crossref y DOAJ gratis a la vez (opcionales: OpenAlex, Semantic Scholar, arXiv y OpenAIRE), sin repetidos; filtros de año, acceso abierto, **tipo de estudio** y **método**; «¿Dónde leerlo?» con vías legales; descarga de citas; **resumen de cada artículo**; **red de citas** |
+| Calidad de la evidencia | **Avisos de retractación** (Retraction Watch vía Crossref y PubMed), **nivel de evidencia** (metaanálisis … opinión), **«muy citado»**, «mejor evidencia primero» y **ficha del estudio** (muestra, diseño, lugar, organismos, duración, hallazgo) con la frase de origen de cada dato, sin IA |
+| Alertas | **Seguir una búsqueda** y ver en Inicio solo las publicaciones nuevas |
+| Revisión de literatura | Pregunta PICO/PEO, sinónimos, estrategia booleana por base, cribado con motivos, **diagrama PRISMA 2020**, texto de métodos, informe Word |
+| Biblioteca | Búsqueda sin internet (también dentro de los PDF), etiquetas, colecciones, **grupos inteligentes**, notas; importa/exporta BibTeX, RIS, EndNote, CSV, CSL-JSON |
+| PDF | Adjuntar PDF a cada publicación, leerlo, **subrayar en colores con notas**, buscar en su texto; la IA usa sus pasajes |
+| Estilos de cita | **10 865 estilos CSL** (revistas, editoriales y normas), ~4 800 sin internet; copiar a Word, .docx o texto; importar `.csl` |
+| Solicitar artículo | **Carta formal** al autor (español/inglés), con su correo cuando Europe PMC lo publica; Word, copiar o abrir en el correo |
+| Proyectos y sincronización | Invitación por código, roles, cambios firmados Ed25519, historial, conflictos sin pérdida; carpeta compartida (Syncthing/USB/red) o paquete manual |
+| Estadística | Descriptiva, t, ANOVA DCA/DBCA/factorial + Tukey, supuestos, Kruskal-Wallis, correlación/regresión, χ² (verificado contra SciPy/statsmodels) |
+| Investigadores | ORCID → «Mis publicaciones»; **citas, índice h, i10** (todas y últimos 5 años) con datos abiertos; **Scopus** opcional con clave personal |
+| Análisis con IA | Preguntar a la biblioteca, evidencia a favor/en contra con **medidor de evidencia**, verificar una cita. Ollama/LM Studio locales o servicios en la nube con autorización; **cada cita y cada frase citada se verifican sin IA** |
+| Seguridad | Copias cifradas (AES-256), CSP, registros sin datos sensibles, proyectos ligados a la llave del creador |
 
-## Requisitos
+## Lo que distingue a BioCiencia
 
-| Programa | Versión | Para |
-| --- | --- | --- |
-| Node.js | 22.5 o superior (LTS) | Compilar la interfaz y ejecutar pruebas |
-| Rust (rustup, toolchain `stable-x86_64-pc-windows-msvc`) | 1.77 o superior | App Windows |
-| Visual Studio Build Tools con «Desarrollo de escritorio con C++» | 2022 o superior | Compilador que usa Rust |
-| WebView2 | Incluido en Windows 10/11 actualizados | Ventana de la app |
-| Git | cualquiera reciente | Control de versiones |
+- **Gratis y libre** (MIT), sin suscripción ni límite de búsquedas en las fuentes gratuitas.
+- **Sus datos en su computadora**: biblioteca, PDF, notas y proyectos funcionan sin internet y no pasan por un servidor de terceros.
+- **Nada inventado y todo verificable**: cada dato de la ficha del estudio muestra su frase; cada cita de la IA se comprueba sin IA; los artículos retractados se señalan.
+- **Además de buscar**: revisión sistemática con PRISMA, gestor de referencias (PDF con subrayados, 10 865 estilos, grupos inteligentes), estadística para experimentos agrícolas, perfil ORCID con índice h y proyectos compartidos con firma digital.
 
-## Primeros pasos (Windows, PowerShell)
+## Lo que BioCiencia no hace (a propósito)
+
+- No usa Sci-Hub ni fuentes no autorizadas: solo vías legales de acceso al texto completo.
+- No trae datos de Google Académico (no tiene API pública) ni suma citas de Scopus (condiciones de Elsevier).
+- No inventa referencias: toda publicación mostrada viene de una fuente real, y la IA solo puede citar las fuentes que se le entregan.
+
+## Para desarrollar
 
 ```powershell
-cd C:\Users\<usuario>\BioCiencia
-npm install          # descarga dependencias (una sola vez)
-npm test             # pruebas automáticas del núcleo y la base de datos
-npm run dev:web      # versión web en http://localhost:5173
-npm run dev:desktop  # app Windows en modo desarrollo (primera vez tarda varios minutos)
+cd C:\BioCiencia
+npm.cmd install
+npm.cmd run dev:web        # desarrollo, http://localhost:5173
+npm.cmd run app            # versión compilada, http://127.0.0.1:5173 (la que usa el lanzador)
+npm.cmd test               # pruebas unitarias
+npx playwright test        # pruebas de interfaz
+npm.cmd run test:live      # contra las API reales (requiere internet)
+npm.cmd run test:perf      # mediciones de rendimiento
 ```
 
-Instalador de Windows: ver [docs/INSTALACION-WINDOWS.md](docs/INSTALACION-WINDOWS.md).
+App de Windows: `npm.cmd run dev:desktop` requiere Rust y Visual Studio Build Tools ([docs/INSTALACION-WINDOWS.md](docs/INSTALACION-WINDOWS.md)).
+El instalador recomendado no necesita Rust: `scripts/instalador-windows.sh` (MinGW-w64 + NSIS) crea `BioCiencia-<versión>-instalador.exe`.
+Para la versión nativa con Tauri, el flujo **«Instalador Windows»** de GitHub Actions (`.github/workflows/instalador-windows.yml`) compila el `.msi` y el `.exe` en los servidores de GitHub.
 
-## Estructura
+### Estructura
 
 ```
-packages/core      Identificadores, DOI, duplicados, reloj HLC (TypeScript)
-packages/sources   Clientes de fuentes científicas (OpenAlex)
-packages/storage   Esquema SQL, migraciones y repositorio (mismo SQL en Windows y web)
-packages/stats     Estadística verificada contra SciPy (sin dependencias)
+packages/core      Identificadores, duplicados, exportación/importación, Word, métricas, grupos inteligentes, cifrado
+packages/cite      Estilos de cita CSL (catálogo de 10 865, 41 incluidos) con citeproc-js
+packages/sources   Clientes de Europe PMC, PubMed, Crossref, DOAJ, arXiv, OpenAIRE, Semantic Scholar, OpenAlex, Unpaywall, ORCID, OpenCitations; revisión
+packages/storage   Esquema SQLite (9 migraciones) y repositorio común (web y Windows)
+packages/stats     Estadística sin dependencias
 packages/sync      Firmas Ed25519, eventos, reproducción con permisos, motor de sincronización
-packages/ui        Interfaz React (pantallas, componentes, estilos)
-apps/web           Versión web/PWA: SQLite WebAssembly en OPFS
-apps/desktop       Versión Windows: Tauri 2 + Rust
-  src-tauri/db     Acceso a SQLite nativo (crate de Rust con pruebas propias)
-tests/e2e          Pruebas de interfaz con Playwright
-docs/              Arquitectura, análisis de referencia, guías
+packages/ai        Conexión con modelos (Ollama, OpenAI-compatibles, Anthropic) y verificación de citas
+packages/ui        Interfaz React
+apps/web           PWA: SQLite WebAssembly en OPFS
+apps/desktop       Windows: Tauri 2 + Rust (rusqlite)
+scripts/servir.mjs Servidor local del lanzador (solo 127.0.0.1)
+installer/windows  BioCiencia.exe (servidor nativo en C, ícono junto al reloj) e instalador NSIS
+tests/             Interfaz (Playwright), dos nodos simulados, seguridad, rendimiento, pruebas en vivo
+docs/              Guía de uso, arquitectura, sincronización, seguridad, rendimiento
 ```
-
-## Pruebas
-
-| Comando | Qué prueba |
-| --- | --- |
-| `npm test` | Núcleo, base de datos y cliente OpenAlex con respuestas reales grabadas (69 pruebas) |
-| `npm run test:live` | Búsquedas reales en OpenAlex (~0,003 USD del cupo gratuito) y en las fuentes gratuitas (requiere internet; opcional `BC_EMAIL=su@correo` para Unpaywall) |
-| `cargo test --manifest-path apps/desktop/src-tauri/db/Cargo.toml` | SQLite nativo de Rust, FTS5, transacciones, copia (4 pruebas) |
-| `npx playwright test` | Interfaz web completa en Chromium (5 pruebas) |
-| `npm run typecheck` | Tipos de TypeScript |
-
-## Fuentes y costos
-
-Por defecto se busca en **Europe PMC, PubMed, Crossref y DOAJ, que son gratuitas**. OpenAlex es opcional
-(casilla en el buscador) y la búsqueda por título, autor o revista lo usa. arXiv y CORE no permiten llamadas
-desde el navegador y quedan para la app de Windows. Detalles verificados: `packages/sources/tests/fixtures/FUENTES.md`.
-
-OpenAlex cobra por uso: cada búsqueda cuesta 0,001 USD de un cupo gratuito diario de 0,10 USD
-(unas 100 búsquedas por día y por conexión); buscar por DOI y el autocompletado no consumen cupo.
-BioCiencia muestra el costo y el saldo en cada búsqueda, no repite una consulta idéntica en
-10 minutos y guarda todo para consultarlo sin internet. Puede indicar su correo en
-Configuración, como recomienda OpenAlex.
-
-## Dónde se guardan los datos
-
-- **Windows:** `%APPDATA%\ec.biociencia.app\biociencia.db`
-- **Web:** almacenamiento privado del navegador (OPFS). Borrar los datos del sitio borra la biblioteca.
-
-## Acceso a texto completo
-
-BioCiencia solo integra vías legales. El botón «¿Dónde leerlo?» de cada artículo consulta Unpaywall
-(copias legales en la editorial, PubMed Central y repositorios institucionales) y ofrece el acceso
-institucional del propio usuario (proxy de su biblioteca), un correo preparado para pedir el artículo al
-autor y la búsqueda en Google Académico (se abre en el navegador; Google no ofrece API). No se conecta a servicios que distribuyen artículos sin
-autorización de sus titulares.
 
 ## Documentación
 
-- [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) — decisiones técnicas
-- [docs/ANALISIS-CONSENSUS.md](docs/ANALISIS-CONSENSUS.md) — análisis funcional de referencia
-- [docs/INSTALACION-WINDOWS.md](docs/INSTALACION-WINDOWS.md) — compilar e instalar
+- [docs/GUIA_USUARIO.md](docs/GUIA_USUARIO.md) — guía de uso para el grupo
+- [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) · [docs/SINCRONIZACION.md](docs/SINCRONIZACION.md) · [docs/SEGURIDAD.md](docs/SEGURIDAD.md) · [docs/RENDIMIENTO.md](docs/RENDIMIENTO.md)
+- [docs/INSTALACION-WINDOWS.md](docs/INSTALACION-WINDOWS.md) · [packages/sources/tests/fixtures/FUENTES.md](packages/sources/tests/fixtures/FUENTES.md) (comportamiento verificado de cada API)
 - [ROADMAP.md](ROADMAP.md) · [CHANGELOG.md](CHANGELOG.md)
+
+## Licencia
+
+**Libre y gratuita**: licencia [MIT](LICENSE). Cualquiera puede usar, copiar, modificar y compartir BioCiencia sin costo, también en otras instituciones, manteniendo el aviso de autoría. Componentes de terceros (pdf.js, citeproc-js, estilos CSL): [TERCEROS.md](TERCEROS.md).

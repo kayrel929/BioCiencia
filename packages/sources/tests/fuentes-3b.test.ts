@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   authorRequestEmail, buildCrossrefUrl, buildDoajUrl, buildEsearchUrl, buildEuropePmcUrl, CrossrefClient, DoajClient,
-  EuropePmcClient, googleScholarForWork, googleScholarUrl, institutionalUrl, mailtoLink, mergeResults, parsePubmedXml,
+  EuropePmcClient, institutionalUrl, mailtoLink, mergeResults, parsePubmedXml,
   PubMedClient, searchSources, SourceError, stripTags, UnpaywallClient, type FreeSource, type HttpGet,
 } from "../src/index.ts";
 
@@ -124,7 +124,29 @@ describe("Europe PMC", () => {
     const u = new URL(buildEuropePmcUrl({ text: "maize", filters: { yearFrom: 2015, yearTo: 2025, openAccess: true }, sort: "recent", page: 3 }));
     expect(u.searchParams.get("query")).toBe("((maize) AND PUB_YEAR:[2015 TO 2025]) AND OPEN_ACCESS:Y");
     expect(u.searchParams.get("sort")).toBe("P_PDATE_D desc");
-    expect(u.searchParams.get("page")).toBe("3");
+    // Europe PMC ignora «page»: se usa cursorMark
+    expect(u.searchParams.get("page")).toBeNull();
+    expect(u.searchParams.get("cursorMark")).toBe("*");
+  });
+
+  it("paginación con cursorMark: la página 2 usa el nextCursorMark de la respuesta real", async () => {
+    const calls: string[] = [];
+    const body = fx("europepmc-search-stenocarpella.json");
+    const http = vi.fn(async (url: string) => {
+      calls.push(url);
+      return { ok: true, status: 200, headers: { get: () => null }, text: async () => body };
+    }) as unknown as HttpGet;
+    const c = new EuropePmcClient(http);
+    await c.search({ text: "Stenocarpella maydis", perPage: 2 });
+    await c.search({ text: "Stenocarpella maydis", perPage: 2, page: 2 });
+    expect(new URL(calls[0]!).searchParams.get("cursorMark")).toBe("*");
+    expect(new URL(calls[1]!).searchParams.get("cursorMark")).toBe("AoIIQYlpsSg1MDk3NDIxMA==");
+    // Pedir la página 3 de una consulta nueva recorre las anteriores; aquí la respuesta grabada repite
+    // el mismo cursor (señal de fin de lista), así que se detiene y no inventa una tercera página
+    calls.length = 0;
+    const r = await new EuropePmcClient(http).search({ text: "Stenocarpella maydis", perPage: 2, page: 3 });
+    expect(calls).toHaveLength(2);
+    expect(r.works).toEqual([]);
   });
 });
 
@@ -229,10 +251,6 @@ describe("búsqueda combinada", () => {
 
 describe("enlaces de acceso legal", () => {
   const w = { title: "Breeding for resistances to Ralstonia solanacearum", doi: "10.3389/fpls.2014.00715", venue: "Frontiers in Plant Science", year: 2014, authors: [{ name: "Gaëlle Huet" }], landingUrl: null };
-  it("Google Académico se abre en el navegador (sin API)", () => {
-    expect(googleScholarUrl("Ralstonia solanacearum")).toBe("https://scholar.google.com/scholar?q=Ralstonia%20solanacearum");
-    expect(googleScholarForWork(w)).toContain("%22Breeding%20for%20resistances");
-  });
   it("proxy institucional solo con https y con o sin {url}", () => {
     expect(institutionalUrl("https://login.ezproxy.uni.edu/login?url=", w)).toBe("https://login.ezproxy.uni.edu/login?url=https%3A%2F%2Fdoi.org%2F10.3389%2Ffpls.2014.00715");
     expect(institutionalUrl("https://proxy.lib/go?u={url}&x=1", w)).toBe("https://proxy.lib/go?u=https%3A%2F%2Fdoi.org%2F10.3389%2Ffpls.2014.00715&x=1");
@@ -249,5 +267,38 @@ describe("enlaces de acceso legal", () => {
   });
   it("stripTags limpia JATS y entidades", () => {
     expect(stripTags("<jats:p>Uno &amp; dos</jats:p><jats:p>tres&#xe9;</jats:p>")).toBe("Uno & dos\ntresé");
+  });
+  it("una entidad numérica fuera del rango Unicode se deja tal cual (no rompe la lectura)", () => {
+    // Antes lanzaba RangeError y se perdía TODA la respuesta de la fuente por un solo carácter mal formado.
+    expect(stripTags("Punto &#x110000; y &#999999999999;")).toBe("Punto &#x110000; y &#999999999999;");
+  });
+});
+
+describe("mensajes de error de las fuentes", () => {
+  const caido = (async () => {
+    throw new TypeError("Failed to fetch");
+  }) as unknown as HttpGet;
+  const responde = (status: number, body: string) =>
+    (async () => ({ ok: status >= 200 && status < 300, status, headers: { get: () => null }, text: async () => body })) as unknown as HttpGet;
+
+  it("si un servicio no responde, no se culpa a la conexión del usuario", async () => {
+    const err = (await new DoajClient(caido).search({ text: "x" }).catch((e) => e)) as SourceError;
+    expect(err).toBeInstanceOf(SourceError);
+    expect(err.source).toBe("doaj");
+    expect(err.message).not.toMatch(/revise su conexión/i);
+    expect(err.message).toMatch(/no respondió|saturado/i);
+  });
+
+  it("el 502 de DOAJ (Cloudflare) se explica como servicio saturado, no como culpa del usuario", async () => {
+    // Comprobado el 2026-10-17: DOAJ responde «Error 502: Bad gateway» desde su origen.
+    const err = (await new DoajClient(responde(502, '{"title":"Error 502: Bad gateway"}')).search({ text: "x" }).catch((e) => e)) as SourceError;
+    expect(err.status).toBe(502);
+    expect(err.message).toBe("DOAJ respondió con un error (502).");
+  });
+
+  it("el 429 de Semantic Scholar (límite de consultas) se explica aparte", async () => {
+    const err = (await new DoajClient(responde(429, "{}")).search({ text: "x" }).catch((e) => e)) as SourceError;
+    expect(err.status).toBe(429);
+    expect(err.message).toMatch(/pidió esperar un momento/);
   });
 });

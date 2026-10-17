@@ -81,10 +81,10 @@ test("identidad, biblioteca sin duplicados, proyecto persistente y pantallas pen
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/04-configuracion-oscuro.png` });
 
-  // 7. Los módulos futuros se declaran pendientes, no simulados
-  for (const name of ["Análisis con IA", "Editor científico"]) {
+  // 7. Ya no quedan módulos marcados como pendientes
+  for (const name of ["Análisis con IA", "Descubrimiento"]) {
     await nav(page, name).click();
-    await expect(page.getByTestId("pending")).toBeVisible();
+    await expect(page.getByTestId("pending")).toHaveCount(0);
   }
 });
 

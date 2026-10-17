@@ -16,7 +16,7 @@ export const OPENALEX_BASE = "https://api.openalex.org";
 export const WORK_FIELDS = [
   "id", "doi", "title", "display_name", "publication_year", "publication_date", "type", "language",
   "cited_by_count", "ids", "authorships", "primary_location", "best_oa_location", "open_access",
-  "keywords", "abstract_inverted_index", "primary_topic",
+  "keywords", "abstract_inverted_index", "primary_topic", "biblio",
 ].join(",");
 
 /** Dominios científicos de OpenAlex (ids verificados en /domains). */
@@ -170,6 +170,9 @@ export function parseOpenAlexWork(r: Json, fetchedAt: string): Work {
     authors,
     year: typeof r.publication_year === "number" ? r.publication_year : null,
     venue: pl.source?.display_name ?? null,
+    volume: r.biblio?.volume ?? null,
+    issue: r.biblio?.issue ?? null,
+    pages: r.biblio?.first_page ? (r.biblio.last_page && r.biblio.last_page !== r.biblio.first_page ? `${r.biblio.first_page}-${r.biblio.last_page}` : r.biblio.first_page) : null,
     doi: normalizeDoi(r.doi ?? r.ids?.doi ?? null),
     pmid: r.ids?.pmid ? String(r.ids.pmid).replace(/\D/g, "") || null : null,
     openalexId: normalizeOpenAlexId(r.id ?? null),
@@ -213,7 +216,7 @@ export class OpenAlexClient {
     } catch (e) {
       const aborted = e instanceof Error && e.name === "AbortError";
       throw new OpenAlexError(
-        aborted ? "OpenAlex no respondió a tiempo. Intente de nuevo." : "No se pudo conectar con OpenAlex. Revise su conexión a internet.",
+        aborted ? "OpenAlex no respondió a tiempo. Intente de nuevo." : "No se pudo conectar con OpenAlex. Puede que el servicio esté saturado o no responda ahora mismo; inténtelo de nuevo en unos minutos.",
         null,
         e instanceof Error ? e.message : String(e),
       );

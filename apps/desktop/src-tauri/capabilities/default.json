@@ -9,6 +9,14 @@
     "core:default",
     "opener:allow-open-url",
     "dialog:allow-save",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "http:default",
+    {
+      "identifier": "http:allow-fetch",
+      "allow": [
+        { "url": "https://**" },
+        { "url": "http://**" }
+      ]
+    }
   ]
 }

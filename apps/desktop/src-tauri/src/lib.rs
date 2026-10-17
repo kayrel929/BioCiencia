@@ -22,24 +22,37 @@ fn db_describe(db: State<'_, Db>) -> Value {
     db.describe()
 }
 
-/// Extensiones que la app puede escribir (exportaciones y copias de seguridad).
-const ALLOWED_EXT: [&str; 7] = ["bib", "ris", "enw", "xml", "csv", "json", "txt"];
+/// Extensiones que la app puede escribir (exportaciones, manuscritos y copias de seguridad).
+const ALLOWED_EXT: [&str; 10] = ["bib", "ris", "enw", "xml", "csv", "json", "txt", "html", "md", "docx"];
 
 /// Escribe un archivo elegido por el usuario en el diálogo «Guardar como».
 /// Se escribe primero a un temporal y luego se reemplaza, para no dejar archivos a medias.
-#[tauri::command]
-fn save_text_file(path: String, contents: String) -> Result<(), String> {
-    let p = std::path::PathBuf::from(&path);
+fn write_user_file(path: &str, bytes: &[u8]) -> Result<(), String> {
+    let p = std::path::PathBuf::from(path);
     let ext = p.extension().and_then(|e| e.to_str()).map(|e| e.to_ascii_lowercase()).unwrap_or_default();
     if !ALLOWED_EXT.contains(&ext.as_str()) {
         return Err(format!("Extensión no permitida: .{ext}"));
     }
     let tmp = p.with_extension(format!("{ext}.tmp"));
-    std::fs::write(&tmp, contents.as_bytes()).map_err(|e| format!("No se pudo escribir: {e}"))?;
+    std::fs::write(&tmp, bytes).map_err(|e| format!("No se pudo escribir: {e}"))?;
     std::fs::rename(&tmp, &p).map_err(|e| {
         let _ = std::fs::remove_file(&tmp);
         format!("No se pudo guardar: {e}")
     })
+}
+
+#[tauri::command]
+fn save_text_file(path: String, contents: String) -> Result<(), String> {
+    write_user_file(&path, contents.as_bytes())
+}
+
+/// Archivos binarios (Word .docx). Límite de 50 MB.
+#[tauri::command]
+fn save_binary_file(path: String, contents: Vec<u8>) -> Result<(), String> {
+    if contents.len() > 50 * 1024 * 1024 {
+        return Err("El archivo supera 50 MB".into());
+    }
+    write_user_file(&path, &contents)
 }
 
 // ---------------- Carpeta de sincronización (Fase 5) ----------------
@@ -65,6 +78,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_http::init())
         .setup(|app| {
             // Carpeta de datos del usuario: %APPDATA%\ec.biociencia.app\biociencia.db
             let dir = app.path().app_data_dir()?;
@@ -72,7 +86,7 @@ pub fn run() {
             app.manage(db);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![db_exec, db_all, db_batch, db_describe, save_text_file, sync_list, sync_read, sync_append])
+        .invoke_handler(tauri::generate_handler![db_exec, db_all, db_batch, db_describe, save_text_file, save_binary_file, sync_list, sync_read, sync_append])
         .run(tauri::generate_context!())
         .expect("error al iniciar BioCiencia");
 }

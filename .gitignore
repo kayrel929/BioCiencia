@@ -10,3 +10,9 @@ playwright-report/
 *.db-wal
 *.db-shm
 apps/desktop/src-tauri/db/target/
+tests/perf/resultado.json
+*.tsbuildinfo
+installer/windows/dist-instalador/
+installer/windows/salida/
+installer/windows/LICENSE.txt
+installer/windows/TERCEROS.txt

@@ -76,3 +76,11 @@ Lo que **no** se ha probado: dos computadoras físicas con Syncthing. Pasos:
 - Las notas y la bibliografía se combinan, pero el texto largo **no** se edita a la vez entre varias personas. La edición colaborativa en tiempo real (CRDT) es la Fase 8.
 - Retirar a un miembro le impide ver el proyecto en BioCiencia y hace que sus cambios posteriores se rechacen. Los archivos que **ya** recibió en su carpeta siguen en su disco: los eventos están firmados, no cifrados. El cifrado de extremo a extremo de cada proyecto queda para la Fase 11.
 - Un reloj adelantado más de 5 minutos no adelanta el reloj local, pero su evento se ordena con su propia marca de tiempo.
+
+## Identificador del proyecto ligado a la llave (Fase 11)
+
+Al compartir un proyecto, su identificador (ULID) lleva en sus últimos 16 caracteres los primeros 80 bits de
+SHA-256(«biociencia-proyecto» | llave pública del creador | tiempo). Al reproducir los eventos, solo se acepta la
+creación firmada con esa llave. Así, aunque alguien con acceso a la carpeta escriba otra «creación» con fecha
+anterior, no puede apropiarse del proyecto. Los proyectos creados antes de la Fase 11 reciben un identificador
+nuevo en el momento de compartirlos (sus publicaciones, notas, manuscritos y datos se conservan).

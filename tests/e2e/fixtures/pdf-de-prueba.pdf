@@ -1,0 +1,58 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+2 0 obj
+<< /Length 246 >>
+stream
+BT
+/F1 14 Tf
+72 760 Td
+18 TL
+(Documento de prueba de BioCiencia) Tj T*
+(Este PDF fue generado para las pruebas automaticas.) Tj T*
+(Los conidios sobrevivieron en el rastrojo durante dieciocho meses.) Tj T*
+(Primera pagina del documento.) Tj T*
+ET
+endstream
+endobj
+3 0 obj
+<< /Type /Page /Parent 6 0 R /MediaBox [0 0 612 792] /Contents 2 0 R /Resources << /Font << /F1 1 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 152 >>
+stream
+BT
+/F1 14 Tf
+72 760 Td
+18 TL
+(Segunda pagina) Tj T*
+(La rotacion de cultivos reduce la fuente de inoculo.) Tj T*
+(Fin del documento de prueba.) Tj T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 6 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 1 0 R >> >> >>
+endobj
+6 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>
+endobj
+7 0 obj
+<< /Type /Catalog /Pages 6 0 R >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000106 00000 n 
+0000000403 00000 n 
+0000000529 00000 n 
+0000000732 00000 n 
+0000000858 00000 n 
+0000000921 00000 n 
+trailer
+<< /Size 8 /Root 7 0 R >>
+startxref
+970
+%%EOF

@@ -1,4 +1,4 @@
-import type { Work } from "@biociencia/core";
+import { boundUlid, isBoundUlid, type Work } from "@biociencia/core";
 import { canonical, signText, verifyText } from "./crypto.ts";
 
 /**
@@ -89,3 +89,11 @@ export function decodeResearcherCode(code: string): ResearcherCode {
     throw new Error("El código de investigador está dañado o incompleto.");
   }
 }
+
+/**
+ * Los proyectos compartidos tienen un identificador ligado a la llave de quien los creó.
+ * Así nadie más puede publicar una «creación» falsa (por ejemplo con fecha anterior) y apropiarse del proyecto.
+ */
+const PROJECT_LABEL = "biociencia-proyecto";
+export const projectIdFor = (publicKey: string, timeMs: number = Date.now()) => boundUlid(PROJECT_LABEL, publicKey, timeMs);
+export const projectBoundTo = (projectId: string, publicKey: string) => isBoundUlid(projectId, PROJECT_LABEL, publicKey);

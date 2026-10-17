@@ -77,6 +77,9 @@ export function toBibTeX(works: Work[]): string {
         ["author", w.authors.length ? bibAuthors(w.authors) : null],
         [type === "incollection" ? "booktitle" : type === "phdthesis" ? "school" : "journal", w.venue ? bibEscape(w.venue) : null],
         ["year", w.year ? String(w.year) : null],
+        ["volume", w.volume],
+        ["number", w.issue],
+        ["pages", w.pages ? w.pages.replace(/[-–]+/, "--") : null],
         ["doi", w.doi],
         ["url", w.doi ? `https://doi.org/${w.doi}` : w.landingUrl],
         ["pmid", w.pmid],
@@ -110,6 +113,13 @@ export function toRIS(works: Work[]): string {
     }
     add("T2", w.venue);
     add("PY", w.year);
+    add("VL", w.volume);
+    add("IS", w.issue);
+    if (w.pages) {
+      const [sp, ep] = w.pages.split(/[-–]+/);
+      add("SP", sp);
+      add("EP", ep);
+    }
     add("DO", w.doi);
     add("UR", w.doi ? `https://doi.org/${w.doi}` : w.landingUrl);
     add("AB", w.abstract);
@@ -156,6 +166,9 @@ export function toCslJson(works: Work[]): string {
       }),
       ...(w.venue ? { "container-title": w.venue } : {}),
       ...(w.year ? { issued: { "date-parts": [[w.year]] } } : {}),
+      ...(w.volume ? { volume: w.volume } : {}),
+      ...(w.issue ? { issue: w.issue } : {}),
+      ...(w.pages ? { page: w.pages } : {}),
       ...(w.doi ? { DOI: w.doi, URL: `https://doi.org/${w.doi}` } : w.landingUrl ? { URL: w.landingUrl } : {}),
       ...(w.abstract ? { abstract: w.abstract } : {}),
       ...(w.pmid ? { PMID: w.pmid } : {}),
@@ -189,6 +202,9 @@ export function toEndNote(works: Work[]): string {
     }
     add(type === "Book Section" ? "B" : type === "Thesis" ? "I" : "J", w.venue);
     add("D", w.year);
+    add("V", w.volume);
+    add("N", w.issue);
+    add("P", w.pages);
     add("R", w.doi);
     add("U", w.doi ? `https://doi.org/${w.doi}` : w.landingUrl);
     add("X", w.abstract);
@@ -222,6 +238,9 @@ export function toEndNoteXML(works: Work[]): string {
     parts.push(`<titles><title>${xml(w.title)}</title>${w.venue ? `<secondary-title>${xml(w.venue)}</secondary-title>` : ""}</titles>`);
     if (w.venue) parts.push(`<periodical><full-title>${xml(w.venue)}</full-title></periodical>`);
     if (w.keywords?.length) parts.push(`<keywords>${w.keywords.map((k) => `<keyword>${xml(k)}</keyword>`).join("")}</keywords>`);
+    if (w.pages) parts.push(`<pages>${xml(w.pages)}</pages>`);
+    if (w.volume) parts.push(`<volume>${xml(w.volume)}</volume>`);
+    if (w.issue) parts.push(`<number>${xml(w.issue)}</number>`);
     if (w.year) parts.push(`<dates><year>${w.year}</year></dates>`);
     if (w.pmid) parts.push(`<accession-num>${xml(w.pmid)}</accession-num>`);
     if (w.abstract) parts.push(`<abstract>${xml(w.abstract)}</abstract>`);

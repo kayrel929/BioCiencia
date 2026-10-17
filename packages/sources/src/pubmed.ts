@@ -1,6 +1,7 @@
 import { normalizeDoi, normalizePmid, type AuthorRef, type Work } from "@biociencia/core";
 import { clampPerPage, decodeEntities, getText, lang2, parseJson, stripTags, type FreeSearchParams, type FreeSearchResult, type FreeSource } from "./http.ts";
 import type { HttpGet } from "./openalex.ts";
+import { methodClause, studyTypeClause } from "./studies.ts";
 
 /**
  * PubMed mediante las E-utilities de NCBI — gratuito; 3 consultas por segundo sin clave
@@ -13,6 +14,10 @@ export function buildEsearchUrl(p: FreeSearchParams, email?: string | null): str
   const n = clampPerPage(p.perPage, 100);
   let term = p.text.trim();
   if (p.filters?.openAccess) term = `(${term}) AND free full text[sb]`;
+  const st = studyTypeClause(p.filters?.studyTypes, "pubmed");
+  if (st) term = `(${term}) AND ${st}`;
+  const mt = methodClause(p.filters?.method);
+  if (mt) term = `(${term}) AND ${mt}`;
   const qs = new URLSearchParams({ db: "pubmed", term, retmode: "json", retmax: String(n), retstart: String((Math.max(p.page ?? 1, 1) - 1) * n), tool: "biociencia" });
   const { yearFrom, yearTo } = p.filters ?? {};
   if (yearFrom || yearTo) {
@@ -74,6 +79,9 @@ export function parsePubmedArticle(xmlIn: string, fetchedAt: string): Work {
     authors,
     year: yearStr ? Number(yearStr) : null,
     venue: text(tag(journal, "Title")) || null,
+    volume: text(tag(journal, "Volume")) || null,
+    issue: text(tag(journal, "Issue")) || null,
+    pages: text(tag(tag(article, "Pagination") ?? "", "MedlinePgn")) || null,
     doi,
     pmid,
     abstract: abstract || null,
@@ -85,6 +93,8 @@ export function parsePubmedArticle(xmlIn: string, fetchedAt: string): Work {
     isOpenAccess: pmc ? true : null,
     oaUrl: pmc ? `https://www.ncbi.nlm.nih.gov/pmc/articles/${pmc}/` : null,
     landingUrl: pmid ? `https://pubmed.ncbi.nlm.nih.gov/${pmid}/` : null,
+    pubTypes: types,
+    retraction: types.includes("Retracted Publication") ? { status: "retracted", source: "pubmed" } : null,
     source: "pubmed",
     fetchedAt,
   };
@@ -96,20 +106,33 @@ export function parsePubmedXml(xml: string, fetchedAt: string): Work[] {
 
 export class PubMedClient implements FreeSource {
   readonly id = "pubmed" as const;
+  private last = 0;
+  private gate: Promise<void> = Promise.resolve();
   constructor(
     private readonly http: HttpGet,
-    private readonly opts: { email?: () => string | null; now?: () => Date; timeoutMs?: number } = {},
+    private readonly opts: { email?: () => string | null; now?: () => Date; timeoutMs?: number; minIntervalMs?: number } = {},
   ) {}
+
+  /** NCBI permite 3 consultas por segundo sin clave: se espacian las llamadas de este cliente (≥ 400 ms). */
+  private throttled: HttpGet = (url, init) => {
+    const run = this.gate.then(async () => {
+      const wait = this.last + (this.opts.minIntervalMs ?? 400) - Date.now();
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+      this.last = Date.now();
+    });
+    this.gate = run;
+    return run.then(() => this.http(url, init));
+  };
 
   async search(p: FreeSearchParams): Promise<FreeSearchResult> {
     const email = this.opts.email?.() ?? null;
     const url = buildEsearchUrl(p, email);
-    const s = parseJson("pubmed", (await getText(this.http, "pubmed", url, this.opts.timeoutMs)).text);
+    const s = parseJson("pubmed", (await getText(this.throttled, "pubmed", url, this.opts.timeoutMs)).text);
     const ids: string[] = s?.esearchresult?.idlist ?? [];
     const total = Number(s?.esearchresult?.count ?? 0);
     let works: Work[] = [];
     if (ids.length) {
-      const x = await getText(this.http, "pubmed", buildEfetchUrl(ids, email), this.opts.timeoutMs, "application/xml");
+      const x = await getText(this.throttled, "pubmed", buildEfetchUrl(ids, email), this.opts.timeoutMs, "application/xml");
       const parsed = parsePubmedXml(x.text, (this.opts.now?.() ?? new Date()).toISOString());
       // Mantener el orden de relevancia de esearch
       const byId = new Map(parsed.map((w) => [w.pmid, w]));

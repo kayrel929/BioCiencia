@@ -1,6 +1,7 @@
 {
   "name": "@biociencia/ui",
   "version": "0.1.0-dev",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
@@ -9,11 +10,14 @@
     "./styles.css": "./src/styles.css"
   },
   "dependencies": {
+    "@biociencia/ai": "*",
+    "@biociencia/cite": "*",
     "@biociencia/core": "*",
     "@biociencia/sources": "*",
     "@biociencia/stats": "*",
     "@biociencia/storage": "*",
     "@biociencia/sync": "*",
+    "pdfjs-dist": "6.3.289",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.0"

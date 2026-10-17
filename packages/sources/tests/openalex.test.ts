@@ -143,7 +143,9 @@ describe("errores y costo", () => {
     const c = new OpenAlexClient(vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
     const err = await c.searchWorks({ text: "x" }).catch((e) => e);
     expect(err).toBeInstanceOf(OpenAlexError);
-    expect(err.message).toMatch(/conexión a internet/);
+    // No se culpa a la conexión del usuario: el error puede ser del propio servicio.
+    expect(err.message).toMatch(/no se pudo conectar con OpenAlex/i);
+    expect(err.message).not.toMatch(/revise su conexión/i);
   });
   it("tiempo de espera agotado", async () => {
     const slow: HttpGet = (_u, init) => new Promise((_, rej) => init?.signal?.addEventListener("abort", () => rej(Object.assign(new Error("aborted"), { name: "AbortError" }))));

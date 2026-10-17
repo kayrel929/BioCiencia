@@ -40,6 +40,67 @@ export function parseOrcidPerson(body: any, orcid: string): OrcidPerson {
   return { orcid, name: name || orcid, otherNames: (body?.["other-names"]?.["other-name"] ?? []).map((o: any) => o.content).filter(Boolean) };
 }
 
+export interface OrcidEmployment {
+  organization: string | null;
+  department: string | null;
+  role: string | null;
+  startYear: number | null;
+  /** Sin fecha de fin: es el empleo actual */
+  current: boolean;
+}
+
+/** Empleos públicos del registro ORCID (institución, cargo, departamento). */
+export function parseOrcidEmployments(body: any): OrcidEmployment[] {
+  const out: OrcidEmployment[] = [];
+  for (const g of body?.["affiliation-group"] ?? []) {
+    const summaries: any[] = g?.summaries ?? (g?.["employment-summary"] ? [{ "employment-summary": g["employment-summary"] }] : []);
+    for (const s of summaries) {
+      const e = s?.["employment-summary"] ?? s;
+      if (!e) continue;
+      const organization = e.organization?.name ?? null;
+      const role = e["role-title"] ?? null;
+      if (!organization && !role) continue;
+      const year = e["start-date"]?.year?.value;
+      out.push({
+        organization,
+        department: e["department-name"] ?? null,
+        role,
+        startYear: year ? Number(year) : null,
+        current: !e["end-date"]?.year?.value,
+      });
+    }
+  }
+  return out;
+}
+
+/** El empleo actual (o, si ninguno sigue abierto, el más reciente). */
+export function currentEmployment(list: OrcidEmployment[]): OrcidEmployment | null {
+  if (!list.length) return null;
+  const current = list.filter((e) => e.current);
+  return [...(current.length ? current : list)].sort((a, b) => (b.startYear ?? 0) - (a.startYear ?? 0))[0] ?? null;
+}
+
+export interface OrcidExternalIds {
+  /** «Scopus Author ID», si la persona lo enlazó en su registro público */
+  scopusAuthorId: string | null;
+}
+
+/**
+ * Identificadores externos que la persona enlazó (p. ej., su «Scopus Author ID»).
+ * ORCID no guarda números de citas: solo la identidad y los enlaces a otras bases.
+ */
+export function parseOrcidExternalIds(body: any): OrcidExternalIds {
+  const list: any[] = body?.["external-identifiers"] ?? body?.["external-identifier"] ?? [];
+  let scopusAuthorId: string | null = null;
+  for (const e of Array.isArray(list) ? list : []) {
+    const type = String(e?.["external-identifier-type"] ?? "").toLowerCase();
+    const raw = e?.["external-identifier-id"];
+    const value = typeof raw === "string" ? raw : (raw?.value ?? null);
+    if (value && /scopus/.test(type)) scopusAuthorId = String(value).trim();
+  }
+  return { scopusAuthorId };
+}
+
 /** Un «grupo» de ORCID es un trabajo; puede tener varias versiones (de distintas fuentes). Se usa la preferida. */
 export function parseOrcidWorks(body: any, ownerName: string, orcid: string, fetchedAt: string): OrcidWork[] {
   const out: OrcidWork[] = [];
@@ -116,6 +177,24 @@ export class OrcidClient {
     const r = await this.get(`/${orcid}/works`);
     if (r.status === 404) throw new SourceError("orcid", `No existe un registro ORCID público con el número ${orcid}.`, 404);
     return parseOrcidWorks(r.body, ownerName, orcid, (this.opts.now?.() ?? new Date()).toISOString());
+  }
+
+  /** Empleos que el investigador marcó como públicos (para rellenar la firma de las solicitudes). */
+  async employments(orcidInput: string): Promise<OrcidEmployment[]> {
+    const orcid = normalizeOrcid(orcidInput);
+    if (!orcid) throw new SourceError("orcid", "El ORCID no es válido (revise los 16 dígitos).", null);
+    const r = await this.get(`/${orcid}/employments`);
+    if (r.status === 404) throw new SourceError("orcid", `No existe un registro ORCID público con el número ${orcid}.`, 404);
+    return parseOrcidEmployments(r.body);
+  }
+
+  /** Identificadores externos públicos del registro (p. ej. el «Scopus Author ID»). */
+  async externalIdentifiers(orcidInput: string): Promise<OrcidExternalIds> {
+    const orcid = normalizeOrcid(orcidInput);
+    if (!orcid) throw new SourceError("orcid", "El ORCID no es válido (revise los 16 dígitos).", null);
+    const r = await this.get(`/${orcid}/external-identifiers`);
+    if (r.status === 404) throw new SourceError("orcid", `No existe un registro ORCID público con el número ${orcid}.`, 404);
+    return parseOrcidExternalIds(r.body);
   }
 
   /**

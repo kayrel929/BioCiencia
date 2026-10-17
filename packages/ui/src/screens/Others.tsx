@@ -1,46 +1,6 @@
 import { useState } from "react";
+import { decryptText, encryptText, isEncryptedFile, passwordProblem, type EncryptedFile } from "@biociencia/core";
 import { useApp, useAsync } from "../context.tsx";
-import { Pending } from "../components/Pending.tsx";
-
-export function Analysis() {
-  return (
-    <div className="bc-page">
-      <h1>Análisis con IA</h1>
-      <Pending
-        phase={7}
-        title="Asistente científico con referencias verificables"
-        items={[
-          "Preguntas en lenguaje natural respondidas solo con publicaciones recuperadas (RAG).",
-          "Cada afirmación citada con enlace a la publicación; aviso cuando solo hay resumen.",
-          "Separación entre resultados reportados, inferencias y limitaciones de la evidencia.",
-          "IA local con Ollama; servicios en línea solo con su autorización expresa.",
-          "Lectura y comparación de PDF con tablas que citan cada documento.",
-        ]}
-      />
-    </div>
-  );
-}
-
-export function Editor() {
-  return (
-    <div className="bc-page">
-      <h1>Editor científico</h1>
-      <Pending
-        phase={8}
-        title="Redacción de manuscritos"
-        items={[
-          "Secciones IMRyD, versiones y comentarios de coautores.",
-          "Edición simultánea sin pérdidas (CRDT).",
-          "Citas en APA, Vancouver, Chicago, IEEE y estilos CSL.",
-          "Exportación a DOCX, PDF y HTML.",
-        ]}
-      />
-    </div>
-  );
-}
-
-
-
 
 export function Settings() {
   const { repo, identity, setIdentity, theme, setTheme, platform } = useApp();
@@ -153,63 +113,139 @@ function BackupCard() {
   const { repo, saveFile, setIdentity, refresh } = useApp();
   const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  // Copia cifrada elegida para restaurar, a la espera de la contraseña
+  const [pending, setPending] = useState<EncryptedFile | null>(null);
+  const [restorePw, setRestorePw] = useState("");
+  const [withPdfs, setWithPdfs] = useState(true);
+  const pdfSize = useAsync(() => repo.pdfStorageSize(), []);
+
+  async function restore(data: unknown) {
+    const r = await repo.restoreBackup(data);
+    const me = await repo.getIdentity();
+    if (me) setIdentity(me);
+    refresh();
+    setMsg({ text: `Copia restaurada (${r.rows} registros).` });
+  }
+
   return (
     <div className="bc-card">
       <h2>Copias de seguridad</h2>
       <p className="bc-sub" style={{ fontSize: "0.85rem" }}>
-        Guarda toda su información (biblioteca, proyectos, notas, historial) en un archivo .json. Sirve también para pasar sus datos de la versión web a la de Windows o al revés.
+        Guarda toda su información (biblioteca, PDF y subrayados, proyectos, notas, grupos, historial) en un archivo .json. Sirve también para pasar sus datos de la versión web a la de Windows o al revés.
       </p>
       <div className="bc-alert bc-alert-warn" style={{ fontSize: "0.85rem", marginBottom: 10 }}>
         La copia incluye su <strong>llave privada de firma</strong> (con ella se firman sus cambios en proyectos compartidos).
-        Guárdela en un lugar seguro y no la envíe a otras personas: para invitarle a un proyecto solo hace falta su código de investigador.
+        Protéjala con una contraseña: el archivo queda cifrado (AES-256) y nadie puede abrirlo sin ella. BioCiencia no guarda la contraseña; si la olvida, la copia no se puede recuperar.
       </div>
-      <div className="bc-row">
-        <button
-          className="bc-btn bc-btn-primary"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            try {
-              const b = await repo.exportBackup();
-              const ok = await saveFile(`biociencia-copia-${b.createdAt.slice(0, 10)}.json`, JSON.stringify(b), "application/json");
-              if (ok) setMsg({ text: "Copia de seguridad guardada. Consérvela en otro disco o en la nube." });
-            } catch (e) {
-              setMsg({ text: `No se pudo crear la copia: ${e instanceof Error ? e.message : String(e)}`, error: true });
-            } finally {
-              setBusy(false);
+      <form
+        aria-label="Crear copia de seguridad"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setMsg(null);
+          if (pw || pw2) {
+            if (pw !== pw2) return setMsg({ text: "Las contraseñas no coinciden.", error: true });
+            const problem = passwordProblem(pw);
+            if (problem) return setMsg({ text: problem, error: true });
+          }
+          setBusy(true);
+          try {
+            const b = await repo.exportBackup({ includePdfs: withPdfs });
+            const date = b.createdAt.slice(0, 10);
+            const ok = pw
+              ? await saveFile(`biociencia-copia-cifrada-${date}.json`, JSON.stringify(await encryptText(JSON.stringify(b), pw)), "application/json")
+              : await saveFile(`biociencia-copia-${date}.json`, JSON.stringify(b), "application/json");
+            if (ok) {
+              setMsg({ text: pw ? "Copia cifrada guardada. Consérvela en otro disco o en la nube y recuerde la contraseña." : "Copia guardada SIN contraseña. Consérvela en un lugar seguro." });
+              setPw("");
+              setPw2("");
             }
-          }}
-        >
-          Crear copia de seguridad
-        </button>
-        <label className="bc-btn" htmlFor="bk-file" style={{ cursor: "pointer" }}>Restaurar desde archivo…</label>
-        <input
-          id="bk-file"
-          type="file"
-          accept=".json,application/json"
-          aria-label="Archivo de copia de seguridad"
-          style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (!file) return;
-            if (!window.confirm("Restaurar REEMPLAZA todos los datos actuales por los de la copia. Se recomienda crear antes una copia de lo actual. ¿Continuar?")) return;
+          } catch (err) {
+            setMsg({ text: `No se pudo crear la copia: ${err instanceof Error ? err.message : String(err)}`, error: true });
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <div className="bc-row" style={{ gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+          <input className="bc-input" style={{ flex: 1, minWidth: 180 }} type="password" autoComplete="new-password" aria-label="Contraseña de la copia" placeholder="Contraseña (mín. 10 caracteres)" value={pw} onChange={(e) => setPw(e.target.value)} />
+          <input className="bc-input" style={{ flex: 1, minWidth: 180 }} type="password" autoComplete="new-password" aria-label="Repetir contraseña" placeholder="Repetir contraseña" value={pw2} onChange={(e) => setPw2(e.target.value)} />
+        </div>
+        {pdfSize.data?.count ? (
+          <label className="bc-row" style={{ gap: 6, marginBottom: 8, fontSize: "0.88rem" }}>
+            <input type="checkbox" checked={withPdfs} onChange={(e) => setWithPdfs(e.target.checked)} />
+            Incluir los PDF adjuntos ({pdfSize.data.count} archivo(s), {(pdfSize.data.bytes / 1048576).toFixed(1)} MB). Sin ellos la copia es más liviana, pero conserva los subrayados y el texto.
+          </label>
+        ) : null}
+        <div className="bc-row">
+          <button className="bc-btn bc-btn-primary" type="submit" disabled={busy}>
+            {pw ? "Crear copia cifrada" : "Crear copia de seguridad"}
+          </button>
+          <label className="bc-btn" htmlFor="bk-file" style={{ cursor: "pointer" }}>Restaurar desde archivo…</label>
+          <input
+            id="bk-file"
+            type="file"
+            accept=".json,application/json"
+            aria-label="Archivo de copia de seguridad"
+            style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (!file) return;
+              setMsg(null);
+              let data: unknown;
+              try {
+                data = JSON.parse(await file.text());
+              } catch {
+                return setMsg({ text: "No se restauró nada: el archivo no es JSON válido.", error: true });
+              }
+              if (isEncryptedFile(data)) {
+                setPending(data);
+                setRestorePw("");
+                return;
+              }
+              if (!window.confirm("Restaurar REEMPLAZA todos los datos actuales por los de la copia. Se recomienda crear antes una copia de lo actual. ¿Continuar?")) return;
+              setBusy(true);
+              try {
+                await restore(data);
+              } catch (err) {
+                setMsg({ text: `No se restauró nada: ${err instanceof Error ? err.message : String(err)}`, error: true });
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+        </div>
+      </form>
+      {pending ? (
+        <form
+          aria-label="Abrir copia cifrada"
+          className="bc-row"
+          style={{ gap: 8, flexWrap: "wrap", marginTop: 10 }}
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!window.confirm("Restaurar REEMPLAZA todos los datos actuales por los de la copia. ¿Continuar?")) return;
             setBusy(true);
             try {
-              const data = JSON.parse(await file.text());
-              const r = await repo.restoreBackup(data);
-              const me = await repo.getIdentity();
-              if (me) setIdentity(me);
-              refresh();
-              setMsg({ text: `Copia restaurada (${r.rows} registros).` });
+              const data = JSON.parse(await decryptText(pending, restorePw));
+              await restore(data);
+              setPending(null);
             } catch (err) {
               setMsg({ text: `No se restauró nada: ${err instanceof Error ? err.message : String(err)}`, error: true });
             } finally {
               setBusy(false);
+              setRestorePw("");
             }
           }}
-        />
-      </div>
+        >
+          <span style={{ alignSelf: "center" }}>Esta copia está cifrada.</span>
+          <input className="bc-input" style={{ flex: 1, minWidth: 180 }} type="password" autoComplete="current-password" aria-label="Contraseña para abrir la copia" value={restorePw} onChange={(e) => setRestorePw(e.target.value)} />
+          <button className="bc-btn bc-btn-primary" type="submit" disabled={busy || !restorePw}>Descifrar y restaurar</button>
+          <button className="bc-btn" type="button" onClick={() => setPending(null)}>Cancelar</button>
+        </form>
+      ) : null}
+      {busy ? <div className="bc-sub" role="status" style={{ marginTop: 8 }}>Procesando…</div> : null}
       {msg ? <div className={`bc-alert ${msg.error ? "bc-alert-error" : ""}`} role="status" style={{ marginTop: 10 }}>{msg.text}</div> : null}
     </div>
   );

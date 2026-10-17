@@ -286,6 +286,151 @@ CREATE TABLE datasets (
 );
 `,
   },
+  {
+    version: 5,
+    name: "manuscritos-y-paginas",
+    sql: /* sql */ `
+ALTER TABLE works ADD COLUMN volume TEXT;
+ALTER TABLE works ADD COLUMN issue TEXT;
+ALTER TABLE works ADD COLUMN pages TEXT;
+
+-- Manuscritos del editor científico (texto en Markdown con citas [@clave])
+CREATE TABLE manuscripts (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  project_id TEXT REFERENCES projects(id),
+  style TEXT NOT NULL DEFAULT 'apa-es',
+  content TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+`,
+  },  {
+    version: 6,
+    name: "revisiones-de-literatura",
+    sql: /* sql */ `
+-- Revisión de literatura estructurada: pregunta, conceptos, estrategia, búsquedas y cribado
+CREATE TABLE reviews (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  project_id TEXT REFERENCES projects(id),
+  question TEXT NOT NULL DEFAULT '{}',
+  filters TEXT NOT NULL DEFAULT '{}',
+  runs TEXT NOT NULL DEFAULT '[]',
+  searched_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE review_records (
+  review_id TEXT NOT NULL REFERENCES reviews(id),
+  work_id TEXT NOT NULL REFERENCES works(id),
+  found_in TEXT NOT NULL DEFAULT '',
+  decision TEXT NOT NULL DEFAULT 'pending' CHECK (decision IN ('pending', 'include', 'exclude')),
+  reason TEXT,
+  position INTEGER NOT NULL DEFAULT 0,
+  decided_at TEXT,
+  PRIMARY KEY (review_id, work_id)
+);
+CREATE INDEX review_records_decision ON review_records(review_id, decision);
+`,
+  },  {
+    version: 7,
+    name: "historial-de-citas",
+    sql: /* sql */ `
+-- Citas de las publicaciones propias (fuentes abiertas), para los indicadores del perfil
+CREATE TABLE citation_counts (
+  work_id TEXT NOT NULL REFERENCES works(id),
+  source TEXT NOT NULL,
+  total INTEGER NOT NULL,
+  by_year TEXT NOT NULL DEFAULT '{}',
+  fetched_at TEXT NOT NULL,
+  PRIMARY KEY (work_id, source)
+);
+`,
+  },
+  {
+    version: 8,
+    name: "pdf-estilos-grupos",
+    sql: /* sql */ `
+-- PDF adjuntos a cada publicación. El archivo va aparte (base64) para que listar no lo cargue.
+CREATE TABLE attachments (
+  id TEXT PRIMARY KEY,
+  work_id TEXT NOT NULL REFERENCES works(id),
+  filename TEXT NOT NULL,
+  mime TEXT NOT NULL DEFAULT 'application/pdf',
+  size INTEGER NOT NULL,
+  sha256 TEXT NOT NULL,
+  pages INTEGER,
+  text TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX attachments_work ON attachments(work_id);
+CREATE TABLE attachment_data (
+  attachment_id TEXT PRIMARY KEY REFERENCES attachments(id),
+  data TEXT NOT NULL
+);
+CREATE VIRTUAL TABLE attachments_fts USING fts5(attachment_id UNINDEXED, work_id UNINDEXED, text, tokenize = 'unicode61 remove_diacritics 2');
+-- Subrayados y notas sobre el PDF
+CREATE TABLE annotations (
+  id TEXT PRIMARY KEY,
+  attachment_id TEXT NOT NULL REFERENCES attachments(id),
+  page INTEGER NOT NULL,
+  rects TEXT NOT NULL DEFAULT '[]',
+  quote TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  color TEXT NOT NULL DEFAULT 'amarillo',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX annotations_attachment ON annotations(attachment_id, page);
+-- Estilos de cita descargados o importados (los incluidos vienen con la aplicación)
+CREATE TABLE csl_styles (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  xml TEXT NOT NULL,
+  origin TEXT NOT NULL,
+  saved_at TEXT NOT NULL
+);
+-- Grupos inteligentes: colecciones definidas por reglas que se actualizan solas
+CREATE TABLE smart_groups (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  rules TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+`,
+  },
+  {
+    version: 9,
+    name: "retracciones-alertas",
+    sql: /* sql */ `
+-- Tipos de publicación y avisos de retractación de cada publicación
+ALTER TABLE works ADD COLUMN pub_types TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE works ADD COLUMN retraction TEXT;
+-- Alertas: búsquedas que el usuario sigue para ver las publicaciones nuevas
+CREATE TABLE alerts (
+  id TEXT PRIMARY KEY,
+  query TEXT NOT NULL,
+  label TEXT NOT NULL,
+  params TEXT NOT NULL DEFAULT '{}',
+  seen_keys TEXT NOT NULL DEFAULT '[]',
+  last_checked TEXT,
+  last_new INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE alert_items (
+  alert_id TEXT NOT NULL REFERENCES alerts(id),
+  work_id TEXT NOT NULL REFERENCES works(id),
+  found_at TEXT NOT NULL,
+  seen INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (alert_id, work_id)
+);
+`,
+  },
 ];
 
 import type { SqlDriver, Statement } from "./driver.ts";

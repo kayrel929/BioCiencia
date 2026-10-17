@@ -1,5 +1,5 @@
 import { mergeWork, workKeys, type Work } from "@biociencia/core";
-import { compareEvents, type ProjectRole, type SyncEvent } from "./events.ts";
+import { compareEvents, projectBoundTo, type ProjectRole, type SyncEvent } from "./events.ts";
 
 /**
  * Reproduce TODOS los eventos de un proyecto en orden HLC y calcula su estado.
@@ -11,6 +11,8 @@ import { compareEvents, type ProjectRole, type SyncEvent } from "./events.ts";
  *  - El autor debe ser miembro del proyecto, con la misma llave pública registrada.
  *  - Lectores: no modifican nada. Editores: datos, bibliografía y notas. Administradores: además, miembros.
  *  - Cambios simultáneos al mismo campo: gana el de HLC mayor; el otro queda en el historial.
+ *  - Si el identificador del proyecto está ligado a una llave (proyectos compartidos desde la Fase 11),
+ *    solo cuenta la creación firmada con esa llave; cualquier otra es una falsificación.
  */
 
 export interface MemberState {
@@ -84,7 +86,14 @@ export function replayProject(events: SyncEvent[]): ReplayResult {
 
   const reject = (e: SyncEvent, reason: string) => rejected.push({ id: e.id, reason });
 
+  // Dueño legítimo: la llave a la que está ligado el identificador del proyecto (si lo está)
+  const ownerKey = sorted.find((e) => e.type === "project.create" && projectBoundTo(e.project, e.authorKey))?.authorKey ?? null;
+
   for (const e of sorted) {
+    if (e.type === "project.create" && ownerKey && e.authorKey !== ownerKey) {
+      reject(e, "Creación falsa: el identificador del proyecto pertenece a otra llave");
+      continue;
+    }
     if (!st) {
       if (e.type !== "project.create") {
         reject(e, "Evento anterior a la creación del proyecto");

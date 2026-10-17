@@ -2,7 +2,132 @@
 
 Formato basado en *Keep a Changelog*. Fechas en formato AAAA-MM-DD.
 
+## [No publicado]
+
+### Añadido
+- **Más fuentes gratuitas en el Buscador** (2026-10-17): **OpenAIRE** (repositorios y tesis de todo el mundo), **arXiv** (preprints) y **Semantic Scholar** (citas y resúmenes). Ninguna pide clave. arXiv y Semantic Scholar se consultan con los puentes locales del lanzador (`/api/arxiv`, `/api/s2`), porque esos servicios no permiten que el navegador lea sus respuestas; OpenAIRE funciona directo.
+- **Citas en otras bases** en cada publicación propia: OpenAlex y Semantic Scholar por DOI, con un enlace de búsqueda en Scopus.
+
+- **El programa instalable (.exe) ya consulta arXiv, Semantic Scholar y OpenAI** (2026-10-17): esas llamadas se hacen ahora desde el backend de Tauri (Rust), que no está sujeto a las restricciones del navegador, así que ya no hace falta el puente HTTP del lanzador. Se añadió el plugin `tauri-plugin-http` y se sustituye `fetch` por el del plugin al arrancar la app de escritorio. El `.exe` deja de estar desfasado respecto a la versión web.
+
+### Corregido
+- El aviso de esas fuentes ahora explica qué pasó («pidió esperar un momento», «no respondió a tiempo») en lugar de «Revise su conexión a internet».
+- **Los errores ya no culpan a su conexión** (2026-10-17): cuando un servicio no responde —por ejemplo el **502 de DOAJ** comprobado ese día— el aviso dice que puede estar saturado y sugiere reintentar. En el navegador, un error del propio servicio llega igual que un corte de internet, porque su respuesta no trae los permisos de lectura (CORS); por eso el mensaje anterior era engañoso. Corregido en `getText` (todas las fuentes) y en OpenAlex.
+- **OpenAI (ChatGPT) ya funciona en BioCiencia** (2026-10-17): OpenAI no permite que una página del navegador lea sus respuestas, así que el programa las pide desde su propia computadora con el puente local `/api/openai` del lanzador, igual que ya hacía con arXiv y Semantic Scholar. Antes, aun con una clave correcta, la conexión fallaba con «No se pudo conectar». Además, la pantalla de IA avisa ahora de que **una suscripción a ChatGPT no es una clave de API**.
+
+
+### Corregido (continuación, 2026-10-17)
+- **Revisión completa de la aplicación**: se corrigieron varias fallas reales encontradas al revisar todo el programa:
+  - **Pérdida de observaciones** al extraer datos con IA: `setLibraryNotes` sobrescribía lo que el usuario había escrito; ahora se añade sin borrar. Lo mismo en «Pasar a observaciones» del lector de PDF (que además añade la publicación a la biblioteca si no estaba). Nuevo método `appendLibraryNotes`.
+  - **Un proyecto con revisión asociada no se podía compartir**: `rekeyProject` olvidaba la tabla `reviews` en la reasignación y rompía la clave foránea. Corregido.
+  - **El formulario de un proyecto se vaciaba al refrescar en segundo plano** (sincronización, añadir una nota…): ahora se rellena una sola vez por proyecto.
+  - **La pantalla de IA se rompía** si el proveedor guardado no era un preset conocido: se usa el primero como respaldo.
+  - **Búsqueda en Semantic Scholar**: el filtro «Solo acceso abierto» no se aplicaba (ahora se filtra por artículo) y el parámetro `sort` se enviaba a un endpoint que no lo admite (ahora se ordena la página leída).
+  - **`decodeEntities` lanzaba `RangeError`** con entidades numéricas fuera del rango Unicode (`&#x110000;`), tumbando la lectura de toda la fuente por un solo carácter.
+  - **«Cargar más»** usaba el texto vivo del cuadro en vez de la consulta ejecutada: se mezclaban resultados de dos búsquedas.
+  - **Mensaje engañoso** «Guardado» al re-guardar una recomendación que ya estaba; ahora dice «ya estaba en su biblioteca».
+  - **Alta de identidad** sin manejo de error: ahora avisa si falla.
+  - **Arranque web** sin aviso si el motor SQLite no carga: ahora se informa y no se queda en «Cargando…».
+- **Proyectos deja de aparecer** a petición del usuario: se quitó de la barra lateral y de los lugares donde se mencionaba (tarjeta de Inicio, «Añadir a proyecto» del Buscador y la Biblioteca, selector de proyecto en Revisión, enlaces en Investigadores). Los datos se conservan; la pantalla de Sincronización se mantiene.
+
+
+### Retirado
+- **Los botones «Buscar en Google Académico»** (2026-10-17), a petición del usuario: desaparecen del Buscador, de «¿Dónde leerlo?» y de «Ver citas en otras bases». El perfil propio de Google Académico (sus citas, h e i10) se mantiene. «¿Dónde leerlo?» queda con dos caminos: acceso institucional y pedirlo al autor.
+
+## [1.2.0] — 2026-10-15
+
+### Añadido
+- **Instalador de Windows** (`BioCiencia-1.2.0-instalador.exe`): sin Node.js ni permisos de administrador; accesos en escritorio y menú Inicio, desinstalador, ícono junto al reloj para abrir o salir. `BioCiencia.exe` es un servidor nativo (C) solo en 127.0.0.1:5173, con control de la cabecera Host. Probado con Wine (instalar, 28 pruebas de interfaz contra el programa instalado, desinstalar).
+- **Avisos de retractación**: Crossref `updated-by` (Retraction Watch) y PubMed/Europe PMC «Retracted Publication»; botón «Revisar retracciones» en la biblioteca.
+- **Nivel de evidencia**, **«muy citado»** y «mejor evidencia primero».
+- **Ficha del estudio** sin IA con la frase de origen de cada dato.
+- **Alertas**: seguir una búsqueda y ver las novedades en Inicio.
+- **Medidor de evidencia** en el análisis con IA (excluye artículos retractados).
+- Grupos inteligentes por nivel de evidencia y por retractación.
+
+### Retirado
+- Restos del editor científico (estilos y funciones de manuscritos sin uso; los datos antiguos se conservan).
+
+## [1.1.0] — 2026-10-15
+
+### Añadido (funciones de gestor de referencias, con diseño propio)
+- **PDF** en cada publicación de la biblioteca: lectura, subrayado en colores con notas, búsqueda dentro del PDF, búsqueda de su texto desde la biblioteca, y uso de sus pasajes en el análisis con IA (dependencia nueva: `pdfjs-dist` 6.3.289, Apache 2.0).
+- **10 865 estilos de cita CSL** con citeproc-js (dependencia nueva: `citeproc` 2.4.63, CPAL 1.0): bibliografía de la biblioteca, de un proyecto o de una publicación; copiar a Word, .docx, texto; importar `.csl`.
+- **Grupos inteligentes** en la biblioteca.
+- **Solicitar artículo completo**: carta muy formal al autor en español, inglés o ambos; detecta el correo del autor cuando Europe PMC lo publica.
+- Copias de seguridad con o sin PDF.
+
+### Retirado
+- **Editor científico** (pedido del usuario). Los manuscritos guardados siguen en la base de datos y en las copias de seguridad.
+
+## [1.0.1] — 2026-10-15
+
+- Cada artículo (buscador, biblioteca, perfil, proyectos) tiene su **resumen**: vista previa, «Leer resumen completo» y «Buscar resumen» en Europe PMC / Crossref cuando la fuente no lo trajo (se guarda).
+- Inicio sin búsquedas de ejemplo fijas.
+- Licencia libre y gratuita: **MIT** (archivo `LICENSE`).
+
+## [1.0.0-rc1] — 2026-10-15
+
+### Fase 7: análisis con IA con citas verificadas
+- Paquete `@biociencia/ai`: Ollama, LM Studio, OpenAI-compatibles y Anthropic; verificación de números de cita y de frases citadas.
+- Pantalla «Análisis con IA»: preguntar a la biblioteca, evidencia para una afirmación, verificar una cita.
+- Servicios en la nube solo con autorización; clave de IA fuera de las copias de seguridad.
+- Corregido: los ajustes guardados podían pisar el proveedor elegido si se cambiaba antes de que terminaran de cargar.
+
+### Fase 10: lanzador de Windows
+- «Iniciar BioCiencia.cmd» y `scripts/servir.mjs` (`npm run app`); instalable como app (PWA).
+- GitHub Actions: pruebas, instalador Windows y publicación web.
+
+### Fase 12: documentación
+- Guía de uso completa y pantalla «Ayuda» con buscador; README final.
+
 ## [0.1.0-dev] — 2026-10-15
+
+### Perfil: citas, índice h, i10 y Scopus
+
+#### Añadido
+- Investigadores: tarjeta «Citas» con citas, índice h e i10 (todas y últimos 5 años) y gráfico por año (OpenCitations / Europe PMC); citas por artículo (abiertas y Crossref).
+- Scopus opcional con clave personal: recuadro oficial por artículo y enlace al perfil de autor. CSP: `frame-src https://api.elsevier.com`.
+- Migración 7 (`citation_counts`); la clave de Scopus se excluye de las copias de seguridad.
+
+### Fase 3c: red de citas, tipo de estudio y revisión de literatura
+
+#### Añadido
+- «Red de citas» en el buscador y la biblioteca (Europe PMC y OpenCitations + Crossref).
+- Filtros de tipo de estudio y de método (PubMed y Europe PMC); las demás fuentes se omiten y se informa.
+- Pantalla «Revisión de literatura»: estrategia PICO/PEO, búsqueda en 4 bases, cribado, PRISMA 2020, informe Word. Migración 6 (`reviews`, `review_records`).
+- OpenCitations en la lista permitida (CSP) de la web y de Windows.
+
+#### Corregido
+- Europe PMC repetía la primera página al pedir más resultados (ahora usa `cursorMark`).
+- Una palabra clave `null` de Europe PMC detenía la unión de resultados.
+- Consultas seguidas bloqueadas por Crossref y PubMed: pausas, espaciado y un reintento.
+
+### Fase 11: seguridad y rendimiento
+
+#### Añadido
+- Copia de seguridad cifrada con contraseña (Configuración); la restauración detecta el archivo cifrado y pide la contraseña.
+- `redact()` para limpiar registros; CSP en la versión web compilada; CSP de Windows con `object-src 'none'`, `base-uri`, `form-action` y `frame-ancestors`.
+- Pruebas de seguridad (`tests/security`) y de rendimiento (`npm run test:perf`), docs/SEGURIDAD.md y docs/RENDIMIENTO.md.
+- SHA-256 síncrono propio e identificadores ULID ligados a una llave.
+
+#### Corregido
+- Un miembro con acceso a la carpeta compartida podía apropiarse de un proyecto publicando una creación con fecha anterior. Ahora el identificador del proyecto está ligado a la llave de su creador; los proyectos anteriores reciben un identificador nuevo al compartirlos.
+- La detección de citas `[@…]` tardaba segundos con texto malformado muy largo.
+- El registro de sincronización podía guardar correos o rutas con el nombre de usuario.
+
+### Fase 8: editor científico y estilos de cita
+
+#### Añadido
+- Pantalla Editor científico con plantillas, vista previa, guardado automático y diálogo «Insertar cita».
+- Estilos APA 7 (español/inglés) y Vancouver sin dependencias (`cite.ts`), con desambiguación de autor-año y numeración por aparición.
+- Exportación a Word (.docx) sin librerías (`docx.ts`, ZIP + CRC-32 propios), HTML y Markdown.
+- Migración 5: columnas `volume`, `issue`, `pages` en `works` y tabla `manuscripts` (en la copia de seguridad).
+- Volumen/número/páginas desde las 5 fuentes y en todos los formatos de importación/exportación.
+- App Windows: comando `save_binary_file` y extensiones html, md y docx permitidas.
+
+#### No incluido
+- Coedición simultánea (CRDT), comentarios y sincronización de manuscritos.
 
 ### Fase 9: estadística
 

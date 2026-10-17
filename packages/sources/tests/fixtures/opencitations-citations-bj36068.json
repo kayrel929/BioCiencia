@@ -1,0 +1,20 @@
+[
+    {
+        "oci": "062601608261-062604246427",
+        "citing": "omid:br/062601608261 doi:10.1016/j.funbio.2017.08.006 openalex:W2752527114 pmid:29029703",
+        "cited": "omid:br/062604246427 openalex:W2587346346 doi:10.14393/bj-v33n1a2017-36068",
+        "creation": "2017-11",
+        "timespan": "P0Y",
+        "journal_sc": "no",
+        "author_sc": "no"
+    },
+    {
+        "oci": "062604249879-062604246427",
+        "citing": "omid:br/062604249879 openalex:W4391663803 doi:10.4025/actasciagron.v46i1.63370",
+        "cited": "omid:br/062604246427 openalex:W2587346346 doi:10.14393/bj-v33n1a2017-36068",
+        "creation": "2023-12-11",
+        "timespan": "P6Y",
+        "journal_sc": "no",
+        "author_sc": "no"
+    }
+]

@@ -130,10 +130,6 @@ code, .mono { font-family: var(--bc-mono); font-size: 0.86em; }
 .bc-chip { border: 1px solid var(--bc-border); background: var(--bc-surface); border-radius: 99px; padding: 4px 12px; font-size: 0.85rem; color: var(--bc-text-2); cursor: pointer; font: inherit; }
 .bc-chip:hover { border-color: var(--bc-primary); color: var(--bc-primary); }
 
-/* ---------- Pendiente ---------- */
-.bc-phase { border: 1px dashed var(--bc-border); border-radius: var(--bc-radius); padding: 24px; background: var(--bc-surface); }
-.bc-phase ul { margin: 8px 0 0; padding-left: 20px; color: var(--bc-text-2); }
-
 /* ---------- Tablas ---------- */
 .bc-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 .bc-table th, .bc-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--bc-border); vertical-align: top; }
@@ -173,3 +169,136 @@ code, .mono { font-family: var(--bc-mono); font-size: 0.86em; }
 .bc-sources .bc-chip input { margin: 0; accent-color: var(--bc-primary); }
 .bc-chip-note { font-size: 0.72rem; opacity: 0.75; }
 .bc-disabled { opacity: 0.5; pointer-events: none; }
+
+.bc-filters .bc-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; }
+.bc-filters .bc-chip input { margin: 0; accent-color: var(--bc-primary); }
+
+/* Revisión de literatura */
+.bc-prisma { display: grid; gap: 10px; max-width: 640px; }
+.bc-prisma-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: stretch; }
+.bc-prisma-box { border: 1.5px solid var(--bc-border-strong, var(--bc-border)); border-radius: 8px; padding: 8px 12px; font-size: 0.85rem; background: var(--bc-surface); }
+.bc-prisma-box strong { font-size: 1.05rem; }
+.bc-prisma-stage { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--bc-text-3); font-weight: 700; }
+.bc-concept { border: 1px solid var(--bc-border); border-radius: 8px; padding: 10px; }
+.bc-screen-item { border-bottom: 1px solid var(--bc-border); padding: 10px 0; }
+.bc-screen-item[data-decision="include"] { border-left: 4px solid var(--bc-green); padding-left: 10px; }
+.bc-screen-item[data-decision="exclude"] { border-left: 4px solid var(--bc-text-3); padding-left: 10px; opacity: 0.75; }
+@media (max-width: 640px) { .bc-prisma-row { grid-template-columns: 1fr; } }
+
+/* Citas del perfil (estilo perfil académico) */
+.bc-metrics td:not(:first-child), .bc-metrics th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.bc-cite-bars { display: flex; align-items: flex-end; gap: 4px; height: 90px; margin-top: 10px; border-bottom: 1px solid var(--bc-border); }
+.bc-cite-bars div { flex: 1; background: var(--bc-primary); border-radius: 3px 3px 0 0; min-height: 1px; position: relative; }
+.bc-cite-years { display: flex; gap: 4px; font-size: 0.68rem; color: var(--bc-text-3); }
+.bc-cite-years span { flex: 1; text-align: center; }
+.bc-scopus { border: 0; display: block; margin-top: 4px; background: transparent; }
+
+/* Pestaña de resumen de cada publicación */
+.bc-abstract { margin-top: 6px; }
+.bc-work-abstract.bc-open { display: block; -webkit-line-clamp: unset; overflow: visible; white-space: pre-wrap; background: var(--bc-surface-2); border-left: 3px solid var(--bc-primary); padding: 10px 12px; border-radius: 6px; color: var(--bc-text); line-height: 1.6; }
+.bc-abstract-title { display: block; margin-bottom: 4px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--bc-text-3); }
+.bc-link-btn { background: none; border: 0; padding: 2px 0; color: var(--bc-primary); font: inherit; font-size: 0.85rem; cursor: pointer; text-decoration: underline; }
+
+/* ---------- PDF: lectura y subrayado ---------- */
+.bc-dropzone { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; border: 2px dashed var(--bc-border); border-radius: var(--bc-radius); padding: 14px; }
+.bc-dropzone.bc-drag { border-color: var(--bc-primary); background: var(--bc-primary-soft); }
+.bc-pdf { position: fixed; inset: 0; z-index: 60; background: var(--bc-bg); display: flex; flex-direction: column; }
+.bc-pdf-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 8px 12px; background: var(--bc-surface); border-bottom: 1px solid var(--bc-border); }
+.bc-pdf-name { flex: 1; min-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bc-pdf-body { flex: 1; display: flex; min-height: 0; }
+.bc-pdf-scroll { flex: 1; overflow: auto; padding: 16px; background: #525659; }
+.bc-pdf-page { position: relative; margin: 0 auto; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4); }
+.bc-pdf-page canvas { display: block; }
+.bc-pdf-marks { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.bc-mark { position: absolute; mix-blend-mode: multiply; border-radius: 2px; }
+.bc-pdf-pop { position: absolute; z-index: 5; display: flex; gap: 6px; background: var(--bc-surface); padding: 6px; border-radius: var(--bc-radius-sm); box-shadow: var(--bc-shadow); border: 1px solid var(--bc-border); }
+.bc-pdf-side { width: 320px; max-width: 42vw; overflow: auto; padding: 12px; background: var(--bc-surface); border-left: 1px solid var(--bc-border); }
+.bc-annots { list-style: none; padding: 0; margin: 8px 0 0; }
+.bc-annots li { border-top: 1px solid var(--bc-border); padding: 8px 0; }
+.bc-annots li.here { background: var(--bc-primary-soft); }
+.bc-annots blockquote { margin: 4px 0 6px; padding-left: 8px; font-size: 0.86rem; }
+.bc-swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; padding: 0; cursor: pointer; }
+.bc-swatch.on { border-color: var(--bc-text); }
+.bc-swatch-sm { width: 14px; height: 14px; border-width: 1px; }
+@media (max-width: 760px) {
+  .bc-pdf-body { flex-direction: column; }
+  .bc-pdf-side { width: auto; max-width: none; max-height: 40vh; border-left: 0; border-top: 1px solid var(--bc-border); }
+}
+/* Capa de texto de pdf.js (reglas mínimas tomadas de pdf_viewer.css, Apache 2.0) */
+.textLayer { position: absolute; text-align: initial; inset: 0; overflow: clip; opacity: 1; line-height: 1; z-index: 2;
+  -webkit-text-size-adjust: none; text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0; caret-color: CanvasText;
+  --min-font-size: 1; --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size)); --min-font-size-inv: calc(1 / var(--min-font-size)); }
+.textLayer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; user-select: text; }
+.textLayer > :not(.markedContent), .textLayer .markedContent span:not(.markedContent) { z-index: 1; --font-height: 0; font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1; --rotate: 0deg; transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv)); }
+.textLayer .markedContent { display: contents; }
+.textLayer ::selection { background: rgba(0, 90, 255, 0.28); color: transparent; }
+.textLayer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: 0; cursor: default; user-select: none; }
+
+/* ---------- Bibliografía con estilos CSL ---------- */
+.bc-bib { margin: 8px 0; padding: 12px; background: var(--bc-surface-2); border-radius: var(--bc-radius-sm); max-height: 50vh; overflow: auto; font-family: "Times New Roman", Times, serif; font-size: 1rem; }
+.bc-bib .csl-entry { margin: 0 0 8px; }
+.bc-bib.hanging .csl-entry { padding-left: 2em; text-indent: -2em; }
+.bc-bib .sc { font-variant: small-caps; }
+.bc-style-list { max-height: 260px; overflow: auto; border: 1px solid var(--bc-border); border-radius: var(--bc-radius-sm); margin-top: 6px; }
+.bc-style-list button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 6px 10px; cursor: pointer; color: var(--bc-text); font: inherit; border-bottom: 1px solid var(--bc-border); }
+.bc-style-list button:hover, .bc-style-list button[aria-selected="true"] { background: var(--bc-primary-soft); }
+.bc-dialog.bc-dialog-wide { width: min(860px, 100%); }
+
+/* ---------- Calidad de la evidencia ---------- */
+.bc-work.bc-retracted { border-left: 4px solid var(--bc-danger); padding-left: 10px; }
+.bc-snapshot { margin-top: 4px; }
+.bc-snapshot-table { border-collapse: collapse; font-size: 0.86rem; margin: 4px 0; width: 100%; }
+.bc-snapshot-table th { text-align: left; font-weight: 600; color: var(--bc-text-2); padding: 3px 10px 3px 0; vertical-align: top; white-space: nowrap; width: 1%; }
+.bc-snapshot-table td { padding: 3px 0; }
+.bc-snapshot-src { font-size: 0.8rem; color: var(--bc-text-2); background: var(--bc-surface-2); padding: 4px 8px; border-radius: 6px; margin-top: 2px; }
+.bc-meter { display: flex; height: 22px; border-radius: 6px; overflow: hidden; border: 1px solid var(--bc-border); margin: 6px 0; }
+.bc-meter > div { display: grid; place-items: center; font-size: 0.75rem; color: #fff; font-weight: 600; min-width: 0; }
+.bc-meter .yes { background: var(--bc-green); }
+.bc-meter .no { background: var(--bc-danger); }
+.bc-meter .mix { background: var(--bc-warn); }
+
+/* ---------- Flujo de consenso (estilo Consensus) ---------- */
+.bc-consensus { margin-top: 12px; border: 1px solid var(--bc-border); border-radius: var(--bc-radius); padding: 14px 16px; background: var(--bc-surface-2); }
+.bc-consensus-q { color: var(--bc-primary-strong); }
+.bc-badge-danger { background: var(--bc-danger-soft); color: var(--bc-danger); border-color: transparent; }
+.bc-consensus-quote { margin-top: 6px; border-left: 3px solid var(--bc-primary); padding: 4px 0 4px 10px; background: var(--bc-surface); border-radius: 0 var(--bc-radius-sm) var(--bc-radius-sm) 0; }
+.bc-consensus-cite { margin-top: 4px; font-size: 0.85rem; color: var(--bc-text-2); }
+
+/* Chips de veredicto estilo Consensus: píldora redonda con símbolo */
+.bc-verdict { display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; font-weight: 650; padding: 1px 10px; border-radius: 99px; border: 1px solid transparent; white-space: nowrap; }
+.bc-verdict-positive { background: var(--bc-green-soft); color: var(--bc-green); }
+.bc-verdict-mixed { background: var(--bc-warn-soft); color: var(--bc-warn); }
+.bc-verdict-negative { background: var(--bc-danger-soft); color: var(--bc-danger); }
+.bc-verdict-muted { background: var(--bc-surface-2); color: var(--bc-text-3); border-color: var(--bc-border); }
+
+/* Tabla de síntesis y preguntas relacionadas */
+.bc-consensus .bc-table th { text-transform: none; font-size: 0.78rem; }
+.bc-consensus-related .bc-chip { text-decoration: none; }
+.bc-chips .bc-chip:hover { background: var(--bc-primary-soft); }
+
+/* Hero Consensus: pregunta grande al centro */
+.bc-hero h1 { font-size: 2.5rem; }
+@media (max-width: 860px) { .bc-hero h1 { font-size: 1.9rem; } }
+
+/* Ficha de resultado estilo Consensus: veredicto en la columna izquierda, artículo a la derecha */
+.bc-work-consensus { display: grid; grid-template-columns: minmax(190px, 230px) 1fr; column-gap: 16px; align-items: start; }
+.bc-work-consensus > .bc-consensus-quote {
+  grid-column: 1;
+  grid-row: 1 / span 8;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--bc-border);
+  border-left: 3px solid var(--bc-primary);
+  border-radius: var(--bc-radius);
+  background: var(--bc-surface-2);
+}
+.bc-work-consensus > *:not(.bc-consensus-quote) { grid-column: 2; min-width: 0; }
+.bc-work-consensus .bc-verdict { font-size: 0.86rem; padding: 4px 12px; }
+.bc-work-consensus .bc-consensus-quote .bc-consensus-cite { margin-top: 8px; }
+@media (max-width: 720px) {
+  /* En pantallas angostas todo vuelve a una columna, verdicto arriba */
+  .bc-work-consensus { grid-template-columns: 1fr; }
+  .bc-work-consensus > .bc-consensus-quote { grid-column: 1; grid-row: auto; }
+  .bc-work-consensus > *:not(.bc-consensus-quote) { grid-column: 1; }
+}

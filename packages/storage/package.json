@@ -1,6 +1,7 @@
 {
   "name": "@biociencia/storage",
   "version": "0.1.0-dev",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "main": "src/index.ts",

@@ -2,48 +2,53 @@ import { useState } from "react";
 import { HashRouter, NavLink, Route, Routes } from "react-router-dom";
 import type { BioRepo } from "@biociencia/storage";
 import { AppProvider, useApp, type Platform, type SaveFile, type SyncFolderAccess } from "./context.tsx";
+import { tr, useLang } from "./i18n.tsx";
 import { Logo } from "./components/Logo.tsx";
 import { Icon } from "./components/Icon.tsx";
 import { Welcome } from "./screens/Welcome.tsx";
 import { Home } from "./screens/Home.tsx";
 import { Search } from "./screens/Search.tsx";
 import { Library } from "./screens/Library.tsx";
-import { ProjectDetail, Projects } from "./screens/Projects.tsx";
-import { Analysis, Editor, Settings } from "./screens/Others.tsx";
-import { Statistics } from "./screens/Statistics.tsx";
+import { Settings } from "./screens/Others.tsx";
+import { Analysis } from "./screens/Analysis.tsx";
+import { Review } from "./screens/Review.tsx";
+import { Help } from "./screens/Help.tsx";
+import { Discovery } from "./screens/Discovery.tsx";
 import { Researchers } from "./screens/Researchers.tsx";
 import { AutoSync, SyncScreen } from "./screens/Sync.tsx";
 
-const NAV: { group: string; items: { to: string; label: string; icon: string; phase?: number }[] }[] = [
+// Las etiquetas del menú van por clave de idioma; en inglés se traducen (estilo Consensus), en español quedan como siempre.
+const NAV: { groupKey: string; items: { to: string; labelKey: string; icon: string; phase?: number }[] }[] = [
   {
-    group: "Investigar",
+    groupKey: "nav.group1",
     items: [
-      { to: "/", label: "Inicio", icon: "home" },
-      { to: "/buscar", label: "Buscador", icon: "search" },
-      { to: "/analisis", label: "Análisis con IA", icon: "ai", phase: 7 },
+      { to: "/", labelKey: "nav.home", icon: "home" },
+      { to: "/buscar", labelKey: "nav.search", icon: "search" },
+      { to: "/revision", labelKey: "nav.review", icon: "review" },
+      { to: "/analisis", labelKey: "nav.ai", icon: "ai" },
     ],
   },
   {
-    group: "Organizar",
+    groupKey: "nav.group2",
     items: [
-      { to: "/biblioteca", label: "Biblioteca", icon: "library" },
-      { to: "/proyectos", label: "Proyectos", icon: "project" },
-      { to: "/editor", label: "Editor científico", icon: "editor", phase: 8 },
-      { to: "/estadistica", label: "Estadística", icon: "stats" },
+      { to: "/biblioteca", labelKey: "nav.library", icon: "library" },
+      { to: "/descubrimiento", labelKey: "nav.discovery", icon: "discover" },
     ],
   },
   {
-    group: "Colaborar",
+    groupKey: "nav.group3",
     items: [
-      { to: "/investigadores", label: "Investigadores", icon: "people" },
-      { to: "/sincronizacion", label: "Sincronización", icon: "sync" },
-      { to: "/configuracion", label: "Configuración", icon: "settings" },
+      { to: "/investigadores", labelKey: "nav.researchers", icon: "people" },
+      { to: "/sincronizacion", labelKey: "nav.sync", icon: "sync" },
+      { to: "/configuracion", labelKey: "nav.settings", icon: "settings" },
+      { to: "/ayuda", labelKey: "nav.help", icon: "help" },
     ],
   },
 ];
 
 function Shell() {
   const { identity, theme, setTheme } = useApp();
+  const { lang, setLang } = useLang();
   const [open, setOpen] = useState(false);
   if (!identity) return <Welcome />;
   return (
@@ -63,12 +68,12 @@ function Shell() {
         </div>
         <nav className="bc-nav" aria-label="Principal">
           {NAV.map((g) => (
-            <div key={g.group}>
-              <div className="bc-nav-group">{g.group}</div>
+            <div key={g.groupKey}>
+              <div className="bc-nav-group">{tr(lang, g.groupKey)}</div>
               {g.items.map((i) => (
                 <NavLink key={i.to} to={i.to} end={i.to === "/"}>
                   <Icon name={i.icon} />
-                  {i.label}
+                  {tr(lang, i.labelKey)}
                   {i.phase ? <span className="bc-soon" aria-hidden="true" title={`Pendiente: Fase ${i.phase}`}>F{i.phase}</span> : null}
                 </NavLink>
               ))}
@@ -85,7 +90,19 @@ function Shell() {
               setTheme(theme === "dark" ? "light" : "dark");
             }}
           >
-            <Icon name={theme === "dark" ? "sun" : "moon"} size={15} /> {theme === "dark" ? "Modo claro" : "Modo oscuro"}
+            <Icon name={theme === "dark" ? "sun" : "moon"} size={15} /> {tr(lang, theme === "dark" ? "nav.light" : "nav.theme")}
+          </button>
+          <button
+            className="bc-btn bc-btn-ghost bc-btn-sm"
+            style={{ paddingLeft: 0 }}
+            data-testid="lang-toggle"
+            title="Change the interface language / Cambiar el idioma de la interfaz"
+            onClick={(e) => {
+              e.stopPropagation();
+              void setLang(lang === "es" ? "en" : "es");
+            }}
+          >
+            {lang === "es" ? "🌐 English" : "🌐 Español"}
           </button>
         </div>
       </aside>
@@ -95,10 +112,9 @@ function Shell() {
           <Route path="/buscar" element={<Search />} />
           <Route path="/analisis" element={<Analysis />} />
           <Route path="/biblioteca" element={<Library />} />
-          <Route path="/proyectos" element={<Projects />} />
-          <Route path="/proyectos/:id" element={<ProjectDetail />} />
-          <Route path="/editor" element={<Editor />} />
-          <Route path="/estadistica" element={<Statistics />} />
+          <Route path="/revision" element={<Review />} />
+          <Route path="/ayuda" element={<Help />} />
+          <Route path="/descubrimiento" element={<Discovery />} />
           <Route path="/investigadores" element={<Researchers />} />
           <Route path="/sincronizacion" element={<SyncScreen />} />
           <Route path="/configuracion" element={<Settings />} />

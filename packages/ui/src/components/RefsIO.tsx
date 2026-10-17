@@ -2,6 +2,7 @@ import { useState } from "react";
 import { parseReferences, toBibTeX, toCSV, toCslJson, toEndNote, toEndNoteXML, toRIS, type ImportResult, type Work } from "@biociencia/core";
 import { useApp, useAsync } from "../context.tsx";
 import { Dialog } from "./Pending.tsx";
+import { BibliographyDialog } from "./Bibliography.tsx";
 
 export const EXPORT_FORMATS = [
   { id: "bib", label: "BibTeX (.bib) · LaTeX, Zotero, JabRef", ext: "bib", mime: "application/x-bibtex", fn: toBibTeX },
@@ -62,6 +63,7 @@ export function ExportButton({ getWorks, baseName, label = "Exportar" }: { getWo
 export function CiteButton({ work }: { work: Work }) {
   const { saveFile } = useApp();
   const [msg, setMsg] = useState<string | null>(null);
+  const [styled, setStyled] = useState(false);
   const first = work.authors[0]?.name ?? "";
   const surname = first.includes(",") ? first.split(",")[0]! : first.split(" ").slice(-1)[0] ?? "";
   const base = slug(`${surname || work.title.split(" ").slice(0, 3).join(" ")} ${work.year ?? ""}`);
@@ -73,6 +75,10 @@ export function CiteButton({ work }: { work: Work }) {
         aria-label="Descargar cita"
         value=""
         onChange={async (e) => {
+          if (e.target.value === "styled") {
+            e.target.value = "";
+            return setStyled(true);
+          }
           const f = EXPORT_FORMATS.find((x) => x.id === e.target.value);
           e.target.value = "";
           if (!f) return;
@@ -85,9 +91,11 @@ export function CiteButton({ work }: { work: Work }) {
         }}
       >
         <option value="">Descargar cita…</option>
+        <option value="styled">Referencia con estilo de revista (APA, Vancouver, 10 000+)…</option>
         {EXPORT_FORMATS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
       </select>
       {msg ? <span className="bc-sub" role="status" style={{ fontSize: "0.8rem" }}>{msg}</span> : null}
+      {styled ? <BibliographyDialog getWorks={async () => [work]} onClose={() => setStyled(false)} /> : null}
     </span>
   );
 }
@@ -96,10 +104,8 @@ export function CiteButton({ work }: { work: Work }) {
 export function ImportDialog({ onClose }: { onClose: () => void }) {
   const { repo, refresh } = useApp();
   const collections = useAsync(() => repo.listCollections(), []);
-  const projects = useAsync(() => repo.listProjects(), []);
   const [parsed, setParsed] = useState<(ImportResult & { fileName: string }) | null>(null);
   const [collectionId, setCollectionId] = useState("");
-  const [projectId, setProjectId] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -143,13 +149,6 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
             {collections.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
-        <div>
-          <label className="bc-label" htmlFor="imp-proj">Añadir también al proyecto</label>
-          <select id="imp-proj" className="bc-select" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-            <option value="">Ninguno</option>
-            {projects.data?.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
       </div>
       {error ? <div className="bc-alert bc-alert-error" style={{ marginTop: 12 }}>{error}</div> : null}
       {result ? <div className="bc-alert" role="status" style={{ marginTop: 12 }}>{result}</div> : null}
@@ -163,7 +162,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
             if (!parsed) return;
             setBusy(true);
             try {
-              const r = await repo.importWorks(parsed.works, { collectionId: collectionId || undefined, projectId: projectId || undefined });
+              const r = await repo.importWorks(parsed.works, { collectionId: collectionId || undefined });
               setResult(`Importación terminada: ${r.created} nueva(s), ${r.merged} ya existían y se completaron (sin duplicar).`);
               refresh();
             } catch (e) {

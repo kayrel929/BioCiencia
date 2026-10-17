@@ -1,0 +1,25 @@
+# Instalador de Windows (.msi y .exe) compilado en los servidores de GitHub: no hace falta instalar Rust
+# ni Visual Studio en su computadora. Se ejecuta a mano (Actions → «Instalador Windows» → Run workflow)
+# y deja los instaladores como «artifacts» descargables. Los instaladores NO quedan firmados digitalmente:
+# Windows SmartScreen mostrará un aviso («Más información» → «Ejecutar de todas formas»).
+name: Instalador Windows
+on: [workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BioCiencia-instalador-windows
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe

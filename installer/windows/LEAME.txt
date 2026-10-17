@@ -1,0 +1,20 @@
+BioCiencia — Plataforma de investigación científica colaborativa
+La ciencia conectada, el conocimiento compartido.
+
+CÓMO SE USA
+- Abra BioCiencia desde el escritorio o el menú Inicio. Se abre en su navegador
+  en la dirección http://127.0.0.1:5173/ (solo en esta computadora).
+- Mientras está abierta, su ícono aparece junto al reloj de Windows:
+  clic = abrir BioCiencia · clic derecho = abrir en ventana propia o Salir.
+- «BioCiencia (ventana propia)» la abre en una ventana de Microsoft Edge sin pestañas.
+  Ojo: cada navegador guarda sus propios datos. Use siempre el mismo
+  (o pase sus datos con una copia de seguridad: Configuración → Copias de seguridad).
+
+SUS DATOS
+- Se guardan en el navegador de esta computadora. Desinstalar BioCiencia NO los borra.
+- Haga copias de seguridad con regularidad (Configuración → Copias de seguridad).
+
+AYUDA
+- Dentro de la aplicación: menú Ayuda.
+
+Software libre y gratuito, licencia MIT (ver LICENSE.txt y TERCEROS.txt).

@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useApp, useAsync } from "../context.tsx";
 import { Icon } from "../components/Icon.tsx";
 import { Dialog } from "../components/Pending.tsx";
 import { WorkItem } from "../components/WorkItem.tsx";
-import { ExportButton } from "../components/RefsIO.tsx";
+import { CiteButton, ExportButton } from "../components/RefsIO.tsx";
+import { BibliographyButton } from "../components/Bibliography.tsx";
 import type { ProjectMember, Role } from "@biociencia/storage";
 
 const ROLE_LABEL: Record<Role, string> = { admin: "Administrador", editor: "Investigador editor", reader: "Investigador lector" };
@@ -92,9 +93,15 @@ export function ProjectDetail() {
   const [msg, setMsg] = useState<string | null>(null);
   const canEdit = role.data === "admin" || role.data === "editor";
 
+  // El formulario se rellena UNA vez por proyecto: un refresco en segundo plano (sincronización
+  // automática, añadir una nota, quitar una publicación…) no debe borrar lo que el usuario escribe.
+  const loadedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (project.data) setForm({ name: project.data.name, description: project.data.description, objectives: project.data.objectives });
-  }, [project.data]);
+    if (project.data && !project.loading && loadedFor.current !== id) {
+      setForm({ name: project.data.name, description: project.data.description, objectives: project.data.objectives });
+      loadedFor.current = id;
+    }
+  }, [project.data, project.loading, id]);
 
   if (project.loading && !project.data) return <div className="bc-page">Cargando…</div>;
   if (!project.data) {
@@ -184,7 +191,10 @@ export function ProjectDetail() {
       <div className="bc-card" style={{ marginTop: 16 }}>
         <div className="bc-row" style={{ justifyContent: "space-between" }}>
           <h2 style={{ margin: 0 }}>Bibliografía del proyecto ({works.data?.length ?? 0})</h2>
-          <ExportButton baseName={project.data.name} getWorks={() => repo.listProjectWorks(id)} />
+          <div className="bc-row" style={{ gap: 8, flexWrap: "wrap" }}>
+            <BibliographyButton getWorks={() => repo.listProjectWorks(id)} label="Bibliografía con estilo" />
+            <ExportButton baseName={project.data.name} getWorks={() => repo.listProjectWorks(id)} />
+          </div>
         </div>
         {works.data && works.data.length === 0 ? (
           <p className="bc-sub">Añada publicaciones desde la Biblioteca con «Etiquetas, notas y proyecto».</p>
@@ -193,11 +203,16 @@ export function ProjectDetail() {
           <WorkItem
             key={w.id}
             work={w}
-            actions={canEdit ? (
-              <button className="bc-btn bc-btn-sm" onClick={async () => { await repo.removeWorkFromProject(id, w.id!); refresh(); }}>
-                Quitar del proyecto
-              </button>
-            ) : null}
+            actions={
+              <>
+                <CiteButton work={w} />
+                {canEdit ? (
+                  <button className="bc-btn bc-btn-sm" onClick={async () => { await repo.removeWorkFromProject(id, w.id!); refresh(); }}>
+                    Quitar del proyecto
+                  </button>
+                ) : null}
+              </>
+            }
           />
         ))}
       </div>
@@ -209,6 +224,7 @@ export function ProjectDetail() {
 
 function MembersCard({ projectId, shared, isAdmin, members, myId }: { projectId: string; shared: boolean; isAdmin: boolean; members: ProjectMember[]; myId: string }) {
   const { sync, refresh } = useApp();
+  const nav = useNavigate();
   const [code, setCode] = useState("");
   const [newRole, setNewRole] = useState<Role>("editor");
   const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null);
@@ -262,7 +278,7 @@ function MembersCard({ projectId, shared, isAdmin, members, myId }: { projectId:
             Al compartir, cada cambio del proyecto se firma y podrá sincronizarse con las personas que invite.
             Solo este proyecto se comparte: su biblioteca personal sigue siendo privada.
           </p>
-          <button className="bc-btn bc-btn-primary" onClick={() => void run(async () => { await sync.shareProject(projectId); return "Proyecto compartido. Ahora puede invitar investigadores."; })}>
+          <button className="bc-btn bc-btn-primary" onClick={() => void run(async () => { const id = await sync.shareProject(projectId); if (id !== projectId) nav(`/proyectos/${id}`, { replace: true }); return "Proyecto compartido. Ahora puede invitar investigadores."; })}>
             Compartir proyecto
           </button>
         </div>

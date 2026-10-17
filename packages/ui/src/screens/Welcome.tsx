@@ -7,12 +7,21 @@ export function Welcome() {
   const { repo, setIdentity, platform } = useApp();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function start(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return setError("Escriba su nombre como aparecerá ante otros investigadores.");
-    const id = await repo.ensureIdentity(name.trim(), platform === "desktop" ? "Computadora Windows" : "Navegador web");
-    setIdentity(id);
+    setError(null);
+    setBusy(true);
+    try {
+      const id = await repo.ensureIdentity(name.trim(), platform === "desktop" ? "Computadora Windows" : "Navegador web");
+      setIdentity(id);
+    } catch (err) {
+      // Sin esto, un fallo al guardar dejaba el botón sin ninguna respuesta visible.
+      setError(err instanceof Error ? err.message : String(err));
+      setBusy(false);
+    }
   }
 
   return (
@@ -34,8 +43,8 @@ export function Welcome() {
         <label className="bc-label" htmlFor="w-name">Nombre</label>
         <input id="w-name" className="bc-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Dr. Nombre Apellido" autoFocus />
         {error ? <div className="bc-alert bc-alert-error" style={{ marginTop: 10 }}>{error}</div> : null}
-        <button className="bc-btn bc-btn-primary" style={{ marginTop: 16, width: "100%", justifyContent: "center" }} type="submit">
-          Crear identidad y entrar
+        <button className="bc-btn bc-btn-primary" style={{ marginTop: 16, width: "100%", justifyContent: "center" }} type="submit" disabled={busy}>
+          {busy ? "Creando…" : "Crear identidad y entrar"}
         </button>
       </form>
     </div>

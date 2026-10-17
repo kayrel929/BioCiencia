@@ -1,6 +1,7 @@
 [package]
 name = "biociencia"
 version = "0.1.0"
+license = "MIT"
 description = "BioCiencia – Plataforma Inteligente de Investigación Científica Colaborativa"
 edition = "2021"
 rust-version = "1.77"
@@ -16,6 +17,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-http = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 biociencia-db = { path = "db" }

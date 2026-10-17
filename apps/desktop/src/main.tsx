@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { BioRepo, type SqlDriver, type SqlValue, type Statement } from "@biociencia/storage";
 import { BioCienciaApp, StartupError, type SaveFile, type SyncFolderAccess } from "@biociencia/ui";
 import "@biociencia/ui/styles.css";
@@ -19,12 +20,14 @@ const saveFile: SaveFile = async (fileName, content) => {
   const ext = fileName.split(".").pop() ?? "txt";
   const path = await save({ defaultPath: fileName, filters: [{ name: ext.toUpperCase(), extensions: [ext] }] });
   if (!path) return false; // el usuario canceló
-  await invoke("save_text_file", { path, contents: content });
+  if (typeof content === "string") await invoke("save_text_file", { path, contents: content });
+  else await invoke("save_binary_file", { path, contents: Array.from(content) });
   return true;
 };
 
 /** Carpeta de sincronización (Syncthing, red o USB) mediante los comandos sync_* de Rust. */
 const syncFolder: SyncFolderAccess = {
+  kind: "desktop",
   async pick() {
     const p = await open({ directory: true, multiple: false, title: "Carpeta de sincronización de BioCiencia" });
     return typeof p === "string" ? p : null;
@@ -49,6 +52,11 @@ document.addEventListener("click", (ev) => {
     void openUrl(href);
   }
 });
+
+// En la app de escritorio no hay servidor con puentes (/api/*). arXiv, Semantic Scholar y OpenAI no permiten
+// que una página del navegador lea sus respuestas (CORS); el backend de Tauri no está sujeto a esa restricción,
+// así que se sustituye fetch por el del plugin HTTP. El resto del código (fuentes, IA) no cambia.
+window.fetch = tauriFetch as typeof fetch;
 
 async function start() {
   const root = createRoot(document.getElementById("root")!);

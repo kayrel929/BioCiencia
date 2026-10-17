@@ -1,5 +1,10 @@
 # Compilar, ejecutar e instalar BioCiencia en Windows
 
+> **Para usar BioCiencia basta el instalador** `BioCiencia-<versión>-instalador.exe` (ver la Guía de uso, sección 1).
+> Se construye sin Rust con `scripts/instalador-windows.sh` (Linux, o Windows con MSYS2: paquetes `mingw-w64-x86_64-gcc` y `mingw-w64-x86_64-nsis`):
+> compila `installer/windows/biociencia.c` (servidor local nativo, solo 127.0.0.1:5173, ícono junto al reloj) y empaqueta con NSIS
+> la aplicación web compilada. Lo que sigue es para la versión nativa con Tauri (opcional).
+
 Todos los comandos se escriben en **PowerShell** dentro de la carpeta del proyecto.
 
 ## 1. Preparar el equipo (una sola vez)

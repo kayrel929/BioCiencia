@@ -31,3 +31,23 @@ describe("publicaciones propias", () => {
     expect(b.tables.own_works).toHaveLength(2);
   });
 });
+
+describe("historial de citas de las publicaciones propias", () => {
+  it("se guarda, se reemplaza y entra en la copia de seguridad", async () => {
+    const repo = new BioRepo(createNodeDriver());
+    await repo.init();
+    const { id } = await repo.upsertWork(w("10.1234/cit", "Con citas", 2020));
+    await repo.saveCitationHistory(id, "opencitations", { total: 5, byYear: { "2022": 2, "2024": 3 } });
+    await repo.saveCitationHistory(id, "opencitations", { total: 6, byYear: { "2022": 2, "2024": 3, "2025": 1 } });
+    await repo.setSetting("scopus_api_key", "abcdef0123456789abcdef0123456789");
+    await repo.setSetting("scopus_author_id", "57190000000");
+    expect(await repo.listCitationHistories()).toMatchObject([{ workId: id, source: "opencitations", total: 6, byYear: { "2025": 1 } }]);
+    const other = new BioRepo(createNodeDriver());
+    await other.init();
+    await other.restoreBackup(JSON.parse(JSON.stringify(await repo.exportBackup())));
+    expect((await other.listCitationHistories())[0]?.total).toBe(6);
+    // La clave de Scopus no viaja en la copia; el Author ID (dato público) sí
+    expect(await other.getSetting("scopus_api_key")).toBeNull();
+    expect(await other.getSetting("scopus_author_id")).toBe("57190000000");
+  });
+});

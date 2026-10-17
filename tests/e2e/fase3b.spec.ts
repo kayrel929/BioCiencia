@@ -64,7 +64,6 @@ test("búsqueda gratuita en 4 fuentes, unión de repetidos y copia legal con Unp
   const neuro = page.getByTestId("work-item").filter({ hasText: "Improved Extraction of the Neurotoxin" });
   await expect(neuro).toHaveCount(1);
   await expect(neuro).toContainText("Encontrado en: Europe PMC, PubMed");
-  await expect(page.getByRole("link", { name: "Buscar también en Google Académico" })).toHaveAttribute("href", "https://scholar.google.com/scholar?q=Stenocarpella%20maydis");
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/40-busqueda-fuentes-gratis.png` });
 
   // Sin correo de contacto, Unpaywall no se consulta y se explica por qué
@@ -94,10 +93,10 @@ test("búsqueda gratuita en 4 fuentes, unión de repetidos y copia legal con Unp
   expect(upw).toEqual(["https://api.unpaywall.org/v2/10.1155/vmi/4160516?email=investigador%40example.org"]);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/41-donde-leerlo.png` });
 
-  // Pedir al autor: el mensaje se prepara, BioCiencia no envía nada
-  await panel.getByRole("button", { name: "Pedir al autor" }).click();
-  await expect(page.getByLabel("Mensaje")).toHaveValue(/Estimado\/a Dr\.\/Dra\. Leendert Dekker Snyman/);
-  await expect(page.getByLabel("Mensaje")).toHaveValue(/https:\/\/doi\.org\/10\.1155\/vmi\/4160516/);
+  // Solicitar al autor: la carta formal se prepara, BioCiencia no envía nada
+  await panel.getByRole("button", { name: "Solicitar al autor" }).click();
+  await expect(page.getByLabel("Texto de la carta (puede editarlo)")).toHaveValue(/Estimado\(a\) Dr\(a\)\. Snyman:/);
+  await expect(page.getByLabel("Texto de la carta (puede editarlo)")).toHaveValue(/https:\/\/doi\.org\/10\.1155\/vmi\/4160516/);
   await page.getByLabel("Correo del autor").fill("autor@ejemplo.org");
   await expect(page.getByRole("link", { name: "Abrir en mi correo" })).toHaveAttribute("href", /^mailto:autor@ejemplo\.org\?subject=/);
   await page.getByRole("button", { name: "Cerrar", exact: true }).click();

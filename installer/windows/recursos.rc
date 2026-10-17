@@ -1,0 +1,27 @@
+#include <winver.h>
+1 ICON "biociencia.ico"
+1 VERSIONINFO
+FILEVERSION 1,2,0,0
+PRODUCTVERSION 1,2,0,0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "0c0a04b0"
+    BEGIN
+      VALUE "CompanyName", "BioCiencia (software libre, licencia MIT)"
+      VALUE "FileDescription", "BioCiencia - Plataforma de investigacion cientifica colaborativa"
+      VALUE "FileVersion", "1.2.0"
+      VALUE "InternalName", "BioCiencia"
+      VALUE "LegalCopyright", "Licencia MIT"
+      VALUE "OriginalFilename", "BioCiencia.exe"
+      VALUE "ProductName", "BioCiencia"
+      VALUE "ProductVersion", "1.2.0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0c0a, 1200
+  END
+END

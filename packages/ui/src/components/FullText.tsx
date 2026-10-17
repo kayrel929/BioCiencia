@@ -1,16 +1,16 @@
 import { useState } from "react";
 import type { Work } from "@biociencia/core";
-import { authorRequestEmail, googleScholarForWork, institutionalUrl, mailtoLink, OA_STATUS_LABEL, VERSION_LABEL, type OaInfo } from "@biociencia/sources";
+import { institutionalUrl, OA_STATUS_LABEL, VERSION_LABEL, type OaInfo } from "@biociencia/sources";
 import { useApp } from "../context.tsx";
-import { Dialog } from "./Pending.tsx";
+import { RequestArticleDialog } from "./RequestArticle.tsx";
 
 /**
  * «¿Dónde leerlo?»: busca una copia LEGAL y gratuita del texto completo (Unpaywall) y,
- * si no existe, ofrece acceso institucional, pedirlo al autor o abrir Google Académico.
+ * si no existe, ofrece acceso institucional o pedirlo al autor.
  * No descarga nada por sí mismo: abre los enlaces en el navegador.
  */
 export function FullTextButton({ work }: { work: Work }) {
-  const { unpaywall, libraryProxy, identity } = useApp();
+  const { unpaywall, libraryProxy } = useApp();
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<{ loading: boolean; info: OaInfo | null; error: string | null }>({ loading: false, info: null, error: null });
   const [asking, setAsking] = useState(false);
@@ -56,60 +56,26 @@ export function FullTextButton({ work }: { work: Work }) {
                 </ul>
               </div>
             ) : (
-              <div role="status">No se encontró una copia legal gratuita (estado: {OA_STATUS_LABEL[info.status ?? "closed"] ?? info.status}).</div>
+              <div role="status">
+                <strong>No se encontró una copia legal gratuita</strong> ({OA_STATUS_LABEL[info.status ?? "closed"] ?? info.status}).
+                <div className="bc-sub" style={{ fontSize: "0.8rem", marginTop: 4 }}>
+                  Dos caminos legales para conseguir el texto completo:
+                  <ol style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+                    <li><strong>Acceso institucional</strong>: si su universidad o centro tiene suscripción, ábralo con su proxy (Configuración → Fuentes científicas).</li>
+                    <li><strong>Solicitar al autor</strong>: casi todos los autores envían su artículo con gusto; BioCiencia le prepara la carta.</li>
+                  </ol>
+                </div>
+              </div>
             )
           ) : null}
           <div className="bc-row" style={{ gap: 6, marginTop: 8, flexWrap: "wrap" }}>
             {inst ? <a className="bc-btn bc-btn-sm" href={inst} target="_blank" rel="noreferrer">Acceso institucional</a> : null}
-            <button type="button" className="bc-btn bc-btn-sm" onClick={() => setAsking(true)}>Pedir al autor</button>
-            <a className="bc-btn bc-btn-sm" href={googleScholarForWork(work)} target="_blank" rel="noreferrer">Buscar en Google Académico</a>
+            <button type="button" className="bc-btn bc-btn-sm" onClick={() => setAsking(true)}>Solicitar al autor</button>
           </div>
           {!inst ? <div className="bc-sub" style={{ fontSize: "0.78rem", marginTop: 6 }}>Si su institución tiene suscripciones, configure su proxy de biblioteca en Configuración.</div> : null}
         </div>
       ) : null}
-      {asking ? <AskAuthorDialog work={work} sender={identity?.displayName ?? ""} onClose={() => setAsking(false)} /> : null}
+      {asking ? <RequestArticleDialog work={work} onClose={() => setAsking(false)} /> : null}
     </>
-  );
-}
-
-function AskAuthorDialog({ work, sender, onClose }: { work: Work; sender: string; onClose: () => void }) {
-  const draft = authorRequestEmail(work, sender);
-  const [to, setTo] = useState("");
-  const [body, setBody] = useState(draft.body);
-  const [copied, setCopied] = useState(false);
-  return (
-    <Dialog title="Pedir el artículo al autor" onClose={onClose}>
-      <p className="bc-sub" style={{ fontSize: "0.85rem", marginTop: 0 }}>
-        Los autores suelen enviar sus artículos gratis cuando se les pide. El correo del autor de correspondencia aparece en la página del artículo
-        («Abrir artículo»). BioCiencia no envía nada: el mensaje se abre en su programa de correo.
-      </p>
-      <label className="bc-label" htmlFor="ask-to">Correo del autor</label>
-      <input id="ask-to" className="bc-input" type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="autor@universidad.edu" />
-      <label className="bc-label" htmlFor="ask-body">Mensaje</label>
-      <textarea id="ask-body" className="bc-textarea" style={{ minHeight: 220 }} value={body} onChange={(e) => setBody(e.target.value)} />
-      <div className="bc-row" style={{ justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-        <button
-          type="button"
-          className="bc-btn"
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(`${draft.subject}\n\n${body}`);
-              setCopied(true);
-            } catch {
-              setCopied(false);
-            }
-          }}
-        >
-          {copied ? "Copiado" : "Copiar mensaje"}
-        </button>
-        <a
-          className={`bc-btn bc-btn-primary ${/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim()) ? "" : "bc-disabled"}`}
-          aria-disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim())}
-          href={/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim()) ? mailtoLink(to.trim(), draft.subject, body) : undefined}
-        >
-          Abrir en mi correo
-        </a>
-      </div>
-    </Dialog>
   );
 }

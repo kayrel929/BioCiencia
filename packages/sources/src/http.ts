@@ -8,8 +8,12 @@ export const SOURCE_LABELS: Record<string, string> = {
   pubmed: "PubMed",
   europepmc: "Europe PMC",
   doaj: "DOAJ",
+  arxiv: "arXiv",
+  openaire: "OpenAIRE",
   unpaywall: "Unpaywall",
   orcid: "ORCID",
+  opencitations: "OpenCitations",
+  semanticscholar: "Semantic Scholar",
 };
 
 /** Error de una fuente externa, con un mensaje claro en español. */
@@ -28,7 +32,15 @@ export class SourceError extends Error {
 /** Parámetros comunes a las fuentes gratuitas. */
 export interface FreeSearchParams {
   text: string;
-  filters?: { yearFrom?: number | null; yearTo?: number | null; openAccess?: boolean };
+  filters?: {
+    yearFrom?: number | null;
+    yearTo?: number | null;
+    openAccess?: boolean;
+    /** Tipo de estudio (PubMed y Europe PMC) */
+    studyTypes?: import("./studies.ts").StudyType[];
+    /** Palabras del método (PubMed y Europe PMC) */
+    method?: import("./studies.ts").MethodId | null;
+  };
   sort?: SortOrder;
   page?: number;
   perPage?: number;
@@ -67,7 +79,11 @@ export async function getText(
     const aborted = e instanceof Error && e.name === "AbortError";
     throw new SourceError(
       source,
-      aborted ? `${label} no respondió a tiempo.` : `No se pudo conectar con ${label}. Revise su conexión a internet.`,
+      aborted
+        ? `${label} no respondió a tiempo.`
+        // No se culpa a la conexión del usuario: en el navegador, un error del servicio (p. ej. el 502 de DOAJ)
+        // llega aquí igual que si no hubiera internet, porque su respuesta no trae los permisos de lectura (CORS).
+        : `No se pudo conectar con ${label}. Puede que el servicio esté saturado o no responda ahora mismo; inténtelo de nuevo en unos minutos.`,
       null,
       e instanceof Error ? e.message : String(e),
     );
@@ -99,7 +115,9 @@ export function decodeEntities(s: string): string {
   return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
     if (e[0] === "#") {
       const code = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : m;
+      // Fuera del rango Unicode válido (p. ej. &#x110000;) se deja la entidad tal cual: una entidad
+      // rota en los datos de origen no debe abortar la lectura de toda la respuesta.
+      return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : m;
     }
     return ENTITIES[e.toLowerCase()] ?? m;
   });

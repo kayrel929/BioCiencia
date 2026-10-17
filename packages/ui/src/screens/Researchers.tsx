@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { normalizeOrcid } from "@biociencia/core";
 import { collapseSameWork, type OrcidPerson } from "@biociencia/sources";
 import { useApp, useAsync } from "../context.tsx";
@@ -14,7 +13,6 @@ export function Researchers() {
   const saved = useAsync(() => repo.getSetting("my_orcid"), []);
   const syncedAt = useAsync(() => repo.getSetting("my_orcid_synced_at"), []);
   const own = useAsync(() => repo.listOwnWorks(), []);
-  const people = useAsync(() => repo.listCollaborators(), []);
   const [input, setInput] = useState<string | null>(null);
   const [person, setPerson] = useState<OrcidPerson | null>(null);
   const [busy, setBusy] = useState(false);
@@ -148,30 +146,7 @@ export function Researchers() {
           />
         ))}
       </section>
-
-      <section className="bc-card" style={{ marginTop: 16 }}>
-        <h2>Colaboradores</h2>
-        <p className="bc-sub" style={{ fontSize: "0.85rem" }}>Personas con las que comparte proyectos. Para invitar a alguien, pídale su código de investigador (pantalla Sincronización).</p>
-        {people.data && people.data.length === 0 ? <p className="bc-sub">Aún no comparte proyectos con otras personas.</p> : null}
-        <table className="bc-table" data-testid="collaborators">
-          <tbody>
-            {people.data?.map((p) => (
-              <tr key={p.memberId}>
-                <td>{p.displayName}</td>
-                <td>
-                  {p.projects.map((x, i) => (
-                    <span key={x.id}>
-                      {i ? ", " : ""}
-                      <Link to={`/proyectos/${x.id}`}>{x.name}</Link> ({ROLE[x.role]})
-                    </span>
-                  ))}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    </div>
+    </div>
   );
 }
 

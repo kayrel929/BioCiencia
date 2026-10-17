@@ -1,3 +1,4 @@
+import { STUDY_FILTER_SOURCES } from "./studies.ts";
 import { mergeWork, normalizeWork, workKeys, type SourceName, type Work } from "@biociencia/core";
 import { SOURCE_LABELS, SourceError, type FreeSearchParams, type FreeSource } from "./http.ts";
 
@@ -66,6 +67,9 @@ export async function searchSources(sources: FreeSource[], p: FreeSearchParams):
   const lists: { source: SourceName; works: Work[] }[] = [];
   const runs = sources.map(async (s) => {
     const base: SourceOutcome = { source: s.id, label: SOURCE_LABELS[s.id] ?? s.id, total: 0, count: 0, url: null, error: null, skipped: null };
+    if ((p.filters?.studyTypes?.length || p.filters?.method) && !(STUDY_FILTER_SOURCES as readonly string[]).includes(s.id)) {
+      return { ...base, skipped: `${base.label} no permite filtrar por tipo de estudio ni por método` };
+    }
     if (p.filters?.openAccess && NO_OA_FILTER.includes(s.id)) {
       return { ...base, skipped: `${base.label} no permite filtrar por acceso abierto` };
     }

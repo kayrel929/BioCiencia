@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { normalizeOrcid } from "@biociencia/core";
-import { collapseSameWork, OrcidClient, parseOrcidWorks, SourceError, type HttpGet } from "../src/index.ts";
+import { collapseSameWork, currentEmployment, OrcidClient, parseOrcidEmployments, parseOrcidExternalIds, parseOrcidWorks, SourceError, type HttpGet } from "../src/index.ts";
 
 /**
  * Respuestas reales de pub.orcid.org grabadas el 2026-10-15. 0000-0002-1825-0097 es
@@ -103,5 +103,56 @@ describe("ORCID", () => {
     expect(r.works.map((w) => w.doi)).toEqual(["10.21931/rb/2024.09.01.6", "10.1234/otro", "10.1234/version-2025"]);
     expect(r.collapsed).toHaveLength(1);
     expect(r.collapsed[0]!.dropped.map((d) => d.doi)).toEqual(["10.21931/bj/2024.01.01.6", "10.70099/bj/2024.01.01.14"]);
+  });
+
+  it("lee el empleo público actual (institución y cargo) para la firma de las solicitudes", async () => {
+    const body = JSON.stringify({
+      "affiliation-group": [
+        { summaries: [{ "employment-summary": { "role-title": "Pasante", "department-name": "Fitopatología", organization: { name: "Instituto X" }, "start-date": { year: { value: "2012" } }, "end-date": { year: { value: "2016" } } } }] },
+        { summaries: [{ "employment-summary": { "role-title": "Investigador Agropecuario", "department-name": "Protección Vegetal", organization: { name: "INIAP" }, "start-date": { year: { value: "2017" } }, "end-date": null } }] },
+      ],
+    });
+    const { http, calls } = replay({ "/employments": { body } });
+    const list = await new OrcidClient(http, { now: NOW }).employments("0000-0002-1825-0097");
+    expect(list).toHaveLength(2);
+    expect(currentEmployment(list)).toEqual({
+      organization: "INIAP",
+      department: "Protección Vegetal",
+      role: "Investigador Agropecuario",
+      startYear: 2017,
+      current: true,
+    });
+    expect(calls).toEqual(["https://pub.orcid.org/v3.0/0000-0002-1825-0097/employments"]);
+  });
+
+  it("si ningún empleo sigue abierto, se usa el más reciente; y sin empleos, nada", () => {
+    const list = parseOrcidEmployments({
+      "affiliation-group": [
+        { summaries: [{ "employment-summary": { organization: { name: "A" }, "role-title": "Uno", "start-date": { year: { value: "2010" } }, "end-date": { year: { value: "2011" } } } }] },
+        { summaries: [{ "employment-summary": { organization: { name: "B" }, "role-title": "Dos", "start-date": { year: { value: "2020" } }, "end-date": { year: { value: "2021" } } } }] },
+      ],
+    });
+    expect(currentEmployment(list)?.organization).toBe("B");
+    expect(currentEmployment([])).toBeNull();
+    expect(currentEmployment(parseOrcidEmployments({}))).toBeNull();
+  });
+
+  it("lee el «Scopus Author ID» que la persona enlazó en su ORCID", async () => {
+    const body = JSON.stringify({
+      "external-identifiers": [
+        { "external-identifier-type": "Scopus Author ID", "external-identifier-id": { value: "57190000000" } },
+        { "external-identifier-type": "ResearcherID", "external-identifier-id": { value: "A-1234-5678" } },
+      ],
+    });
+    const { http, calls } = replay({ "/external-identifiers": { body } });
+    const ext = await new OrcidClient(http, { now: NOW }).externalIdentifiers("0000-0002-1825-0097");
+    expect(ext).toEqual({ scopusAuthorId: "57190000000" });
+    expect(calls).toEqual(["https://pub.orcid.org/v3.0/0000-0002-1825-0097/external-identifiers"]);
+  });
+
+  it("sin identificadores externos públicos, no inventa ninguno", () => {
+    expect(parseOrcidExternalIds({})).toEqual({ scopusAuthorId: null });
+    // ORCID a veces entrega el valor como texto y la lista con otro nombre
+    expect(parseOrcidExternalIds({ "external-identifier": [{ "external-identifier-type": "Scopus Author ID", "external-identifier-id": "12345" }] })).toEqual({ scopusAuthorId: "12345" });
   });
 });

@@ -1,22 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import type { Work } from "@biociencia/core";
+import { evidenceLevel, highlyCited, type Work } from "@biociencia/core";
 import {
-  DOMAINS, googleScholarUrl, OpenAlexError, prepareQuery, searchSources, SOURCE_LABELS, WORK_TYPES,
+  DOMAINS, METHODS, OpenAlexError, STUDY_TYPES, type MethodId, type StudyType, prepareQuery, searchSources, SOURCE_LABELS, WORK_TYPES,
   type AutocompleteItem, type SearchFilters, type SearchMode, type SortOrder, type SourceOutcome,
 } from "@biociencia/sources";
 import { useApp, useAsync, type SearchSourceId } from "../context.tsx";
 import { FullTextButton } from "../components/FullText.tsx";
 import { Icon } from "../components/Icon.tsx";
 import { WorkItem } from "../components/WorkItem.tsx";
+import { ConsensusPanel } from "../components/Consensus.tsx";
+import type { CheckedVerdict } from "@biociencia/ai";
 import { CiteButton, ExportButton } from "../components/RefsIO.tsx";
+import { CitationNetworkButton } from "../components/CitationNetwork.tsx";
+import { FollowSearchButton } from "../components/Alerts.tsx";
+import { tr, useLang } from "../i18n.tsx";
 
 const LANGUAGES: Record<string, string> = { es: "Español", en: "Inglés", pt: "Portugués", fr: "Francés", de: "Alemán" };
-const MODES: { value: SearchMode; label: string; placeholder: string }[] = [
-  { value: "keywords", label: "Pregunta o palabras clave", placeholder: "Ej.: ¿Qué microorganismos controlan Ralstonia solanacearum? · o un DOI" },
-  { value: "title", label: "Título", placeholder: "Palabras del título" },
-  { value: "author", label: "Autor", placeholder: "Nombre del autor" },
-  { value: "journal", label: "Revista", placeholder: "Nombre de la revista" },
+const MODES: { value: SearchMode; labelKey: string; placeholderKey: string }[] = [
+  { value: "keywords", labelKey: "s.modeKeywords", placeholderKey: "s.phKeywords" },
+  { value: "title", labelKey: "s.modeTitle", placeholderKey: "s.phTitle" },
+  { value: "author", labelKey: "s.modeAuthor", placeholderKey: "s.phAuthor" },
+  { value: "journal", labelKey: "s.modeJournal", placeholderKey: "s.phJournal" },
 ];
 
 interface Row {
@@ -31,6 +36,9 @@ const SOURCE_OPTIONS: { id: SearchSourceId; note: string }[] = [
   { id: "pubmed", note: "gratis · biomedicina y agro" },
   { id: "crossref", note: "gratis · casi todos los DOI" },
   { id: "doaj", note: "gratis · revistas abiertas, SciELO" },
+  { id: "semanticscholar", note: "gratis · citas y resúmenes (puede limitar consultas seguidas)" },
+  { id: "arxiv", note: "gratis · preprints (física, matemáticas, informática, biología)" },
+  { id: "openaire", note: "gratis · repositorios y tesis de todo el mundo" },
   { id: "openalex", note: "0,001 USD por búsqueda (100 gratis al día)" },
 ];
 const DEFAULT_SOURCES: SearchSourceId[] = ["europepmc", "pubmed", "crossref", "doaj"];
@@ -38,6 +46,9 @@ const DEFAULT_SOURCES: SearchSourceId[] = ["europepmc", "pubmed", "crossref", "d
 interface RunState {
   searchId: string;
   sentText: string;
+  /** Texto tal como lo escribió el usuario: es el que se usa al paginar («Cargar más»),
+   *  para no mezclar resultados si después edita el cuadro de búsqueda. */
+  rawText: string;
   simplified: boolean;
   total: number;
   page: number;
@@ -55,6 +66,7 @@ const PER_PAGE = 20;
 
 export function Search() {
   const { repo, openalex, refresh, sources } = useApp();
+  const { lang, t } = useLang();
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
   const savedId = params.get("s");
@@ -62,6 +74,10 @@ export function Search() {
   const [text, setText] = useState(q);
   const [mode, setMode] = useState<SearchMode>("keywords");
   const [filters, setFilters] = useState<SearchFilters>({});
+  // Tipo de estudio y método: solo PubMed y Europe PMC
+  const [studyTypes, setStudyTypes] = useState<StudyType[]>([]);
+  const [method, setMethod] = useState<MethodId | "">("");
+  const studyActive = studyTypes.length > 0 || !!method;
   const [sort, setSort] = useState<SortOrder>("relevance");
   const [showFilters, setShowFilters] = useState(false);
   const [entity, setEntity] = useState<AutocompleteItem | null>(null);
@@ -73,6 +89,9 @@ export function Search() {
   const [inLibrary, setInLibrary] = useState<Set<string>>(new Set());
   const lastAuto = useRef<string>("");
   const [selected, setSelected] = useState<SearchSourceId[] | null>(null);
+  const [byEvidence, setByEvidence] = useState(false);
+  // Flujo de consenso: veredicto (apoya/mixto/refuta) de cada artículo que ya se evaluó con IA
+  const [verdicts, setVerdicts] = useState<Record<string, CheckedVerdict>>({});
 
   // Fuentes elegidas (se recuerdan en esta computadora)
   useEffect(() => {
@@ -94,7 +113,6 @@ export function Search() {
   }
 
   const history = useAsync(() => repo.listSearches(15), []);
-  const projects = useAsync(() => repo.listProjects(), []);
 
   // Búsqueda pedida desde Inicio (?q=…)
   useEffect(() => {
@@ -116,7 +134,7 @@ export function Search() {
       setError(s.error);
       const rows = works.map((w) => ({ work: w, id: w.id! }));
       const multi = s.source.startsWith("varias:") ? s.source.slice(7).split(",").map((x) => SOURCE_LABELS[x] ?? x).join(", ") : undefined;
-      setRun({ searchId: s.id, sentText: s.query, simplified: false, total: s.totalHits ?? rows.length, page: Math.ceil(rows.length / PER_PAGE) || 1, perPage: PER_PAGE, costUsd: 0, remainingUsd: null, rows, sourcesLabel: multi });
+      setRun({ searchId: s.id, sentText: s.query, rawText: s.query, simplified: false, total: s.totalHits ?? rows.length, page: Math.ceil(rows.length / PER_PAGE) || 1, perPage: PER_PAGE, costUsd: 0, remainingUsd: null, rows, sourcesLabel: multi });
       setInLibrary(await repo.libraryMembership(rows.map((r) => r.id)));
     })();
   }, [savedId, repo]);
@@ -143,6 +161,7 @@ export function Search() {
   async function execute(rawText: string, m: SearchMode, f: SearchFilters, s: SortOrder, page = 1) {
     setBusy(true);
     setError(null);
+    if (page === 1) setVerdicts({});
     const fullFilters: SearchFilters = { ...f };
     if (m === "author" && entity) fullFilters.authorId = entity.id;
     if (m === "journal" && entity) fullFilters.sourceId = entity.id;
@@ -155,7 +174,7 @@ export function Search() {
         const w = await openalex.getByDoi(prepared.doi);
         const saved = await repo.saveSearch({ query: rawText.trim(), filters: record, source: "openalex", results: w ? [w] : [], totalHits: w ? 1 : 0, error: w ? null : "DOI no encontrado en OpenAlex" });
         if (!w) setError(`El DOI ${prepared.doi} no está en OpenAlex. Puede registrarlo manualmente en la Biblioteca.`);
-        setRun({ searchId: saved.searchId, sentText: `doi:${prepared.doi}`, simplified: false, total: w ? 1 : 0, page: 1, perPage: 1, costUsd: 0, remainingUsd: null, rows: w ? [{ work: w, id: saved.ids[0]! }] : [] });
+        setRun({ searchId: saved.searchId, sentText: `doi:${prepared.doi}`, rawText: rawText.trim(), simplified: false, total: w ? 1 : 0, page: 1, perPage: 1, costUsd: 0, remainingUsd: null, rows: w ? [{ work: w, id: saved.ids[0]! }] : [] });
         setInLibrary(await repo.libraryMembership(saved.ids));
         return;
       }
@@ -168,10 +187,10 @@ export function Search() {
         return;
       }
       const chosen = selected ?? DEFAULT_SOURCES;
-      if (m === "keywords" && !(chosen.length === 1 && chosen[0] === "openalex")) {
+      if (m === "keywords" && (studyActive || !(chosen.length === 1 && chosen[0] === "openalex"))) {
         const u = await searchSources(chosen.map((id) => sources[id]), {
           text: sentText,
-          filters: { yearFrom: fullFilters.yearFrom, yearTo: fullFilters.yearTo, openAccess: fullFilters.openAccess },
+          filters: { yearFrom: fullFilters.yearFrom, yearTo: fullFilters.yearTo, openAccess: fullFilters.openAccess, studyTypes, method: method || null },
           sort: s,
           page,
           perPage: PER_PAGE,
@@ -183,7 +202,7 @@ export function Search() {
         let searchId: string;
         if (page === 1 || !run) {
           const saved = await repo.saveSearch({
-            query: rawText.trim(), filters: { ...record, sources: chosen }, source: label, results: u.works, totalHits: u.totalReported,
+            query: rawText.trim(), filters: { ...record, sources: chosen, studyTypes, method: method || null }, source: label, results: u.works, totalHits: u.totalReported,
             error: failed.length === u.outcomes.length ? failed.map((o) => o.error).join(" · ") : null,
           });
           searchId = saved.searchId;
@@ -200,7 +219,7 @@ export function Search() {
         rows = [...uniq.values()];
         if (failed.length === u.outcomes.length) setError(`Ninguna fuente respondió: ${failed.map((o) => `${o.label}: ${o.error}`).join(" · ")}`);
         setRun({
-          searchId, sentText, simplified: prepared.simplified, total: u.totalReported, page, perPage: PER_PAGE,
+          searchId, sentText, rawText: rawText.trim(), simplified: prepared.simplified, total: u.totalReported, page, perPage: PER_PAGE,
           costUsd: oa?.costUsd ?? null, remainingUsd: oa?.remainingUsd ?? null, rows, outcomes: u.outcomes,
         });
         setInLibrary(await repo.libraryMembership(rows.map((x) => x.id)));
@@ -219,7 +238,7 @@ export function Search() {
         const seen = new Set(run.rows.map((x) => x.id));
         rows = [...run.rows, ...r.works.map((w, i) => ({ work: w, id: ids[i]! })).filter((x) => !seen.has(x.id))];
       }
-      setRun({ searchId, sentText, simplified: prepared.simplified, total: r.total, page: r.page, perPage: r.perPage, costUsd: r.costUsd, remainingUsd: r.remainingUsd, rows });
+      setRun({ searchId, sentText, rawText: rawText.trim(), simplified: prepared.simplified, total: r.total, page: r.page, perPage: r.perPage, costUsd: r.costUsd, remainingUsd: r.remainingUsd, rows });
       setInLibrary(await repo.libraryMembership(rows.map((x) => x.id)));
     } catch (e) {
       const msg = e instanceof OpenAlexError || e instanceof Error ? e.message : String(e);
@@ -230,6 +249,11 @@ export function Search() {
       refresh();
     }
   }
+
+  // «Muy citado» se calcula entre los resultados visibles; «mejor evidencia primero» reordena sin volver a buscar
+  const hcSet = run ? highlyCited(run.rows.map((r) => r.work)) : new Set<number>();
+  const shownRows = (run?.rows ?? []).map((row, i) => ({ row, hc: hcSet.has(i), ev: evidenceLevel(row.work)?.level ?? 9, i }));
+  if (byEvidence) shownRows.sort((a, b) => a.ev - b.ev || a.i - b.i);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -245,15 +269,15 @@ export function Search() {
 
   const setF = (patch: Partial<SearchFilters>) => setFilters({ ...filters, ...patch });
   const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v));
-  const activeFilters = Object.values(filters).filter((v) => v !== null && v !== undefined && v !== false && v !== "").length;
+  const activeFilters = Object.values(filters).filter((v) => v !== null && v !== undefined && v !== false && v !== "").length + studyTypes.length + (method ? 1 : 0);
   const modeInfo = MODES.find((x) => x.value === mode)!;
 
   return (
     <div className="bc-page">
       <div className="bc-page-head">
         <div>
-          <h1>Buscador científico</h1>
-          <p className="bc-sub">Busca a la vez en Europe PMC, PubMed, Crossref, DOAJ y, si lo elige, OpenAlex. Los resultados repetidos se unen en una sola ficha.</p>
+          <h1>{t("s.title")}</h1>
+          <p className="bc-sub">{t("s.subtitle")}</p>
         </div>
       </div>
 
@@ -272,7 +296,7 @@ export function Search() {
                 lastAuto.current = "";
               }}
             >
-              {m.label}
+              {tr(lang, m.labelKey)}
             </button>
           ))}
         </div>
@@ -285,16 +309,16 @@ export function Search() {
               setText(e.target.value);
               if (entity) setEntity(null);
             }}
-            placeholder={modeInfo.placeholder}
+            placeholder={tr(lang, modeInfo.placeholderKey)}
           />
           <button className="bc-btn bc-btn-primary" type="submit" disabled={busy}>
-            {busy ? "Buscando…" : "Buscar"}
+            {busy ? t("s.searching") : t("home_button")}
           </button>
         </div>
 
         {mode === "keywords" && selected ? (
           <fieldset className="bc-sources" aria-label="Fuentes de búsqueda">
-            <legend className="bc-sub" style={{ fontSize: "0.82rem" }}>Fuentes</legend>
+            <legend className="bc-sub" style={{ fontSize: "0.82rem" }}>{t("s.sources")}</legend>
             {SOURCE_OPTIONS.map((o) => (
               <label key={o.id} className={`bc-chip ${selected.includes(o.id) ? "bc-chip-on" : ""}`} title={o.note}>
                 <input type="checkbox" checked={selected.includes(o.id)} onChange={() => toggleSource(o.id)} aria-label={`${SOURCE_LABELS[o.id]} (${o.note})`} />
@@ -303,7 +327,11 @@ export function Search() {
             ))}
           </fieldset>
         ) : mode !== "keywords" ? (
-          <p className="bc-sub" style={{ fontSize: "0.82rem", marginTop: 8 }}>La búsqueda por {mode === "title" ? "título" : mode === "author" ? "autor" : "revista"} usa OpenAlex (0,001 USD por búsqueda; elegir el autor o la revista de la lista es gratis).</p>
+          <p className="bc-sub" style={{ fontSize: "0.82rem", marginTop: 8 }}>
+            {lang === "en"
+              ? `The search by ${mode === "title" ? "title" : mode === "author" ? "author" : "journal"} uses OpenAlex (0.001 USD per search; picking the author or journal from the list is free).`
+              : `La búsqueda por ${mode === "title" ? "título" : mode === "author" ? "autor" : "revista"} usa OpenAlex (0,001 USD por búsqueda; elegir el autor o la revista de la lista es gratis).`}
+          </p>
         ) : null}
 
         {entity ? (
@@ -339,15 +367,18 @@ export function Search() {
 
         <div className="bc-row" style={{ marginTop: 10, justifyContent: "space-between" }}>
           <button type="button" className="bc-btn bc-btn-sm" aria-expanded={showFilters} onClick={() => setShowFilters(!showFilters)}>
-            Filtros{activeFilters ? ` (${activeFilters})` : ""}
+            {t("s.filters")}{activeFilters ? ` (${activeFilters})` : ""}
           </button>
           <label className="bc-row" style={{ gap: 6, fontSize: "0.9rem" }}>
-            Ordenar por
+            {t("s.sortBy")}
             <select className="bc-select" style={{ width: "auto" }} value={sort} onChange={(e) => setSort(e.target.value as SortOrder)} aria-label="Orden">
-              <option value="relevance">Relevancia</option>
-              <option value="cited">Más citados</option>
-              <option value="recent">Más recientes</option>
+              <option value="relevance">{t("s.rel")}</option>
+              <option value="cited">{t("s.cited")}</option>
+              <option value="recent">{t("s.recent")}</option>
             </select>
+          </label>
+          <label className="bc-row" style={{ gap: 6, fontSize: "0.9rem" }} title={t("s.byEvidenceTip")}>
+            <input type="checkbox" checked={byEvidence} onChange={(e) => setByEvidence(e.target.checked)} /> {t("s.byEvidence")}
           </label>
         </div>
 
@@ -389,9 +420,27 @@ export function Search() {
             <label className="bc-row" style={{ gap: 6, alignSelf: "end", paddingBottom: 8 }}>
               <input type="checkbox" checked={!!filters.openAccess} onChange={(e) => setF({ openAccess: e.target.checked })} /> Solo acceso abierto
             </label>
-            <button type="button" className="bc-btn bc-btn-ghost bc-btn-sm" style={{ alignSelf: "end" }} onClick={() => setFilters({})}>Quitar filtros</button>
+            <fieldset style={{ gridColumn: "1 / -1", border: 0, padding: 0, margin: 0 }} aria-label="Tipo de estudio">
+              <legend className="bc-label">Tipo de estudio (PubMed y Europe PMC)</legend>
+              <div className="bc-row" style={{ gap: 6, flexWrap: "wrap" }}>
+                {STUDY_TYPES.map((t) => (
+                  <label key={t.id} className={`bc-chip ${studyTypes.includes(t.id) ? "bc-chip-on" : ""}`}>
+                    <input type="checkbox" checked={studyTypes.includes(t.id)} onChange={(e) => setStudyTypes(e.target.checked ? [...studyTypes, t.id] : studyTypes.filter((x) => x !== t.id))} />
+                    {t.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <div>
+              <label className="bc-label" htmlFor="f-method">Método (palabras en el texto)</label>
+              <select id="f-method" className="bc-select" value={method} onChange={(e) => setMethod(e.target.value as MethodId | "")}>
+                <option value="">Cualquiera</option>
+                {METHODS.map((m) => <option key={m.id} value={m.id} title={m.terms.join(", ")}>{m.label}</option>)}
+              </select>
+            </div>
+            <button type="button" className="bc-btn bc-btn-ghost bc-btn-sm" style={{ alignSelf: "end" }} onClick={() => { setFilters({}); setStudyTypes([]); setMethod(""); }}>Quitar filtros</button>
             <p className="bc-sub" style={{ fontSize: "0.78rem", gridColumn: "1 / -1", margin: 0 }}>
-              Años y «solo acceso abierto» se aplican en todas las fuentes (Crossref no permite filtrar acceso abierto y se omite). Tipo, área, idioma y citas mínimas solo en OpenAlex.
+              Años y «solo acceso abierto» se aplican en todas las fuentes (Crossref no permite filtrar acceso abierto y se omite). Tipo de documento, área, idioma y citas mínimas solo en OpenAlex. Tipo de estudio (clasificación oficial de PubMed) y método (palabras del método en título y resumen) solo en PubMed y Europe PMC: las demás fuentes se omiten mientras estén activos.
             </p>
           </div>
         ) : null}
@@ -403,13 +452,19 @@ export function Search() {
         <section className="bc-card" style={{ marginTop: 16 }} aria-label="Resultados">
           <div className="bc-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
             <h2 style={{ margin: 0 }} data-testid="results-count">
-              {run.outcomes ? `${run.rows.length} resultados combinados` : run.sourcesLabel ? `${run.rows.length} resultados guardados` : `${run.total.toLocaleString("es")} resultados`}
+              {run.outcomes
+                ? `${run.rows.length} ${t("s.combinedResults")}`
+                : run.sourcesLabel
+                  ? `${run.rows.length} ${t("s.savedResults")}`
+                  : `${run.total.toLocaleString(lang === "en" ? "en" : "es")} ${t("s.results")}`}
             </h2>
             <span className="bc-sub" style={{ fontSize: "0.82rem" }}>
               {savedId
-                ? `Búsqueda guardada · mostrada sin conexión, sin costo${run.sourcesLabel ? ` · fuentes: ${run.sourcesLabel}` : ""}`
+                ? `${t("s.savedSearch")}${run.sourcesLabel ? ` · ${t("s.sourcesShort")}: ${run.sourcesLabel}` : ""}`
                 : run.costUsd !== null
-                  ? `Costo de esta consulta en OpenAlex: ${run.costUsd} USD${run.remainingUsd !== null ? ` · saldo gratuito de hoy: ${run.remainingUsd} USD` : ""}`
+                  ? lang === "en"
+                    ? `OpenAlex cost of this query: ${run.costUsd} USD${run.remainingUsd !== null ? ` · free daily quota left: ${run.remainingUsd} USD` : ""}`
+                    : `Costo de esta consulta en OpenAlex: ${run.costUsd} USD${run.remainingUsd !== null ? ` · saldo gratuito de hoy: ${run.remainingUsd} USD` : ""}`
                   : ""}
             </span>
           </div>
@@ -424,58 +479,56 @@ export function Search() {
           ) : null}
           {run.simplified ? (
             <p className="bc-sub" style={{ fontSize: "0.85rem", marginTop: 6 }} data-testid="sent-query">
-              Las fuentes buscan por palabras; se envió: <code>{run.sentText}</code>
+              {t("s.sentPrefix")} <code>{run.sentText}</code>
             </p>
+          ) : null}
+          {run.rows.length && (q || text.trim()) ? (
+            <ConsensusPanel
+              key={`${run.searchId}`}
+              question={q || text.trim()}
+              rows={run.rows}
+              verdicts={verdicts}
+              onVerdict={(id, v) => setVerdicts((prev) => ({ ...prev, [id]: v }))}
+            />
           ) : null}
           {run.rows.length ? (
             <div style={{ marginTop: 8 }}>
               <div className="bc-row" style={{ gap: 8, flexWrap: "wrap" }}>
-                <ExportButton label="Exportar estos resultados" baseName={`busqueda ${run.sentText ?? ""}`} getWorks={async () => run.rows.map((r) => r.work)} />
-                {run.sentText ? <a className="bc-btn bc-btn-sm" href={googleScholarUrl(run.sentText)} target="_blank" rel="noreferrer">Buscar también en Google Académico</a> : null}
+                <ExportButton label={t("s.export")} baseName={`busqueda ${run.sentText ?? ""}`} getWorks={async () => run.rows.map((r) => r.work)} />
+                {run.sentText && run.outcomes ? (
+                  <FollowSearchButton query={run.sentText} label={text.trim() || run.sentText} sources={selected ?? DEFAULT_SOURCES} baseline={run.rows.map((r) => r.work)} />
+                ) : null}
               </div>
             </div>
           ) : null}
-          {run.rows.length === 0 ? <p className="bc-empty">Sin resultados con estos criterios.</p> : null}
-          {run.rows.map((row) => (
+          {run.rows.length === 0 ? <p className="bc-empty">{t("s.none")}</p> : null}
+          {shownRows.map(({ row, hc }) => (
             <WorkItem
               key={row.id}
               work={row.work}
+              workId={row.id}
+              autoOa
+              highlyCited={hc}
+              verdict={verdicts[row.id]}
               extra={row.foundIn && row.foundIn.length > 1 ? <div className="bc-sub" style={{ fontSize: "0.78rem", marginTop: 4 }}>Encontrado en: {row.foundIn.map((f) => SOURCE_LABELS[f] ?? f).join(", ")}</div> : null}
               actions={
                 <>
                   <FullTextButton work={row.work} />
                   <CiteButton work={row.work} />
+                  <CitationNetworkButton work={row.work} />
                   {inLibrary.has(row.id) ? (
-                    <span className="bc-badge bc-badge-green">En su biblioteca</span>
+                    <span className="bc-badge bc-badge-green">{t("s.inLibrary")}</span>
                   ) : (
-                    <button className="bc-btn bc-btn-sm bc-btn-primary" onClick={() => save(row)}>Guardar en biblioteca</button>
+                    <button className="bc-btn bc-btn-sm bc-btn-primary" onClick={() => save(row)}>{t("s.saveLibrary")}</button>
                   )}
-                  {projects.data && projects.data.length ? (
-                    <select
-                      className="bc-select bc-btn-sm"
-                      style={{ width: "auto" }}
-                      aria-label="Añadir a proyecto"
-                      defaultValue=""
-                      onChange={async (e) => {
-                        if (!e.target.value) return;
-                        await repo.addWorkToProject(e.target.value, row.id);
-                        setInLibrary(new Set([...inLibrary, row.id]));
-                        e.target.value = "";
-                        refresh();
-                      }}
-                    >
-                      <option value="">Añadir a proyecto…</option>
-                      {projects.data.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  ) : null}
                 </>
               }
             />
           ))}
           {!savedId && (run.outcomes ? run.outcomes.some((o) => !o.error && !o.skipped && o.total > run.page * run.perPage) : run.rows.length < run.total) && run.perPage > 1 ? (
             <div style={{ textAlign: "center", marginTop: 12 }}>
-              <button className="bc-btn" disabled={busy} onClick={() => execute(text, mode, filters, sort, run.page + 1)}>
-                {busy ? "Cargando…" : "Cargar más resultados"}
+              <button className="bc-btn" disabled={busy} onClick={() => execute(run.rawText, mode, filters, sort, run.page + 1)}>
+                {busy ? t("s.loading") : t("s.loadMore")}
               </button>
             </div>
           ) : null}
@@ -483,31 +536,31 @@ export function Search() {
       ) : null}
 
       <section className="bc-card" style={{ marginTop: 16 }}>
-        <h2>Historial de búsquedas</h2>
-        <p className="bc-sub" style={{ fontSize: "0.85rem" }}>Al abrir una búsqueda guardada se muestran sus resultados desde su equipo, sin internet ni costo.</p>
-        {history.data && history.data.length === 0 ? <p className="bc-sub">Todavía no hay búsquedas.</p> : null}
+        <h2>{t("s.history")}</h2>
+        <p className="bc-sub" style={{ fontSize: "0.85rem" }}>{t("s.historySub")}</p>
+        {history.data && history.data.length === 0 ? <p className="bc-sub">{t("s.noSearches")}</p> : null}
         {history.data && history.data.length > 0 ? (
           <table className="bc-table">
             <thead>
-              <tr><th>Consulta</th><th>Resultados</th><th>Fecha</th><th><span className="bc-sr">Acciones</span></th></tr>
+              <tr><th>{t("s.tableQ")}</th><th>{t("s.tableR")}</th><th>{t("s.tableD")}</th><th><span className="bc-sr">{t("s.tableS")}</span></th></tr>
             </thead>
             <tbody>
               {history.data.map((s) => (
                 <tr key={s.id}>
-                  <td><Link to={`/buscar?s=${s.id}`}>{s.query || "(sin texto)"}</Link></td>
-                  <td>{s.error ? <span className="bc-badge bc-badge-warn">{s.error.slice(0, 60)}</span> : `${s.resultCount}${s.totalHits ? ` de ${s.totalHits.toLocaleString("es")}` : ""}`}</td>
-                  <td>{new Date(s.createdAt).toLocaleString()}</td>
+                  <td><Link to={`/buscar?s=${s.id}`}>{s.query || (lang === "en" ? "(no text)" : "(sin texto)")}</Link></td>
+                  <td>{s.error ? <span className="bc-badge bc-badge-warn">{s.error.slice(0, 60)}</span> : `${s.resultCount}${s.totalHits ? ` ${lang === "en" ? "of" : "de"} ${s.totalHits.toLocaleString(lang === "en" ? "en" : "es")}` : ""}`}</td>
+                  <td>{new Date(s.createdAt).toLocaleString(lang === "en" ? "en" : "es")}</td>
                   <td>
                     <button
                       className="bc-btn bc-btn-ghost bc-btn-sm"
-                      aria-label={`Borrar del historial: ${s.query}`}
+                      aria-label={`${t("s.deleteFrom")}${s.query}`}
                       onClick={async () => {
                         await repo.deleteSearch(s.id);
                         if (savedId === s.id) setParams({});
                         refresh();
                       }}
                     >
-                      Borrar
+                      {t("s.delete")}
                     </button>
                   </td>
                 </tr>

@@ -4,9 +4,16 @@ import { Icon } from "../components/Icon.tsx";
 import { WorkItem } from "../components/WorkItem.tsx";
 import { ManualWorkForm } from "../components/ManualWorkForm.tsx";
 import { CiteButton, ExportButton, ImportDialog } from "../components/RefsIO.tsx";
+import { CitationNetworkButton } from "../components/CitationNetwork.tsx";
 import { FullTextButton } from "../components/FullText.tsx";
 import { Dialog } from "../components/Pending.tsx";
-import type { LibraryEntry } from "@biociencia/storage";
+import { PdfButton } from "../components/Pdf.tsx";
+import { BibliographyButton } from "../components/Bibliography.tsx";
+import { RetractionCheckButton } from "../components/Retractions.tsx";
+import { SmartGroupEditor } from "../components/SmartGroups.tsx";
+import { describeSmartRules, matchSmartGroup, parseSmartRules } from "@biociencia/core";
+import { WORK_TYPES } from "@biociencia/sources";
+import type { LibraryEntry, SmartGroup } from "@biociencia/storage";
 
 export function Library() {
   const { repo, refresh } = useApp();
@@ -21,14 +28,23 @@ export function Library() {
   const [importing, setImporting] = useState(false);
   const [newCollection, setNewCollection] = useState<string | null>(null);
   const [editing, setEditing] = useState<LibraryEntry | null>(null);
+  const [groupId, setGroupId] = useState("");
+  const [editingGroup, setEditingGroup] = useState<SmartGroup | "new" | null>(null);
+  const groups = useAsync(() => repo.listSmartGroups(), []);
+  const group = groups.data?.find((g) => g.id === groupId) ?? null;
 
-  const entries = useAsync(
-    () => repo.listLibrary({ text: query || undefined, favorite, own, tag: tag || undefined, collectionId: collectionId || undefined }),
-    [query, favorite, own, tag, collectionId],
-  );
+  const filters = { text: query || undefined, favorite, own, tag: tag || undefined, collectionId: collectionId || undefined };
+  /** Publicaciones de la vista actual (con el grupo inteligente aplicado, si hay uno) */
+  async function viewEntries(limit?: number): Promise<LibraryEntry[]> {
+    if (!group) return repo.listLibrary({ ...filters, limit });
+    const rules = parseSmartRules(group.rules);
+    const all = await repo.listLibrary({ ...filters, limit: 100000 });
+    const now = Date.now();
+    return all.filter((e) => matchSmartGroup(e, rules, now)).slice(0, limit ?? 500);
+  }
+  const entries = useAsync(() => viewEntries(), [query, favorite, own, tag, collectionId, groupId, group?.updatedAt]);
   const tags = useAsync(() => repo.allTags(), []);
   const collections = useAsync(() => repo.listCollections(), []);
-  const projects = useAsync(() => repo.listProjects(), []);
 
   async function act(fn: () => Promise<unknown>) {
     await fn();
@@ -45,6 +61,9 @@ export function Library() {
         <div className="bc-row">
           <button className="bc-btn" onClick={() => setNewCollection("")}>
             <Icon name="plus" /> Colección
+          </button>
+          <button className="bc-btn" onClick={() => setEditingGroup("new")} title="Colección que se llena sola según reglas">
+            <Icon name="plus" /> Grupo inteligente
           </button>
           <button className="bc-btn" onClick={() => setImporting(true)}>Importar</button>
           <button className="bc-btn bc-btn-primary" onClick={() => setAdding(true)}>
@@ -81,14 +100,29 @@ export function Library() {
               <option key={c.id} value={c.id}>{c.name} ({c.itemCount})</option>
             ))}
           </select>
+          <select className="bc-select" style={{ width: "auto" }} value={groupId} onChange={(e) => setGroupId(e.target.value)} aria-label="Grupo inteligente">
+            <option value="">Sin grupo inteligente</option>
+            {groups.data?.map((g) => <option key={g.id} value={g.id}>⚙ {g.name}</option>)}
+          </select>
         </form>
+        {group ? (
+          <div className="bc-alert" style={{ marginTop: 10, fontSize: "0.86rem" }} data-testid="smart-group-info">
+            <strong>Grupo inteligente «{group.name}»:</strong>{" "}
+            {describeSmartRules(parseSmartRules(group.rules), { collection: (id) => collections.data?.find((c) => c.id === id)?.name ?? id, type: (t) => WORK_TYPES[t] ?? t }) || "sin reglas"}
+            {" "}<button className="bc-link-btn" onClick={() => setEditingGroup(group)}>Editar</button>
+          </div>
+        ) : null}
         <div className="bc-row" style={{ marginTop: 10, justifyContent: "space-between" }}>
           <span className="bc-sub" style={{ fontSize: "0.85rem" }}>{entries.data ? `${entries.data.length} publicación(es) en esta vista` : ""}</span>
-          <ExportButton
-            baseName={query || tag || "biblioteca"}
-            label="Exportar esta vista"
-            getWorks={async () => (await repo.listLibrary({ text: query || undefined, favorite, own, tag: tag || undefined, collectionId: collectionId || undefined, limit: 100000 })).map((e) => e.work)}
-          />
+          <div className="bc-row" style={{ gap: 8, flexWrap: "wrap" }}>
+            <RetractionCheckButton />
+            <BibliographyButton getWorks={async () => (await viewEntries(100000)).map((e) => e.work)} label="Bibliografía de esta vista" />
+            <ExportButton
+              baseName={group?.name || query || tag || "biblioteca"}
+              label="Exportar esta vista"
+              getWorks={async () => (await viewEntries(100000)).map((e) => e.work)}
+            />
+          </div>
         </div>
       </div>
 
@@ -96,7 +130,7 @@ export function Library() {
         {entries.error ? <div className="bc-alert bc-alert-error">{entries.error}</div> : null}
         {entries.data && entries.data.length === 0 ? (
           <div className="bc-empty">
-            {query || favorite || own || tag || collectionId ? "Ninguna publicación coincide con los filtros." : "Su biblioteca está vacía. Guarde resultados desde el Buscador o añada una referencia manual."}
+            {query || favorite || own || tag || collectionId || group ? "Ninguna publicación coincide con los filtros." : "Su biblioteca está vacía. Guarde resultados desde el Buscador o añada una referencia manual."}
           </div>
         ) : null}
         {entries.data?.map((e) => (
@@ -117,6 +151,7 @@ export function Library() {
             }
             actions={
               <>
+                <PdfButton work={e.work} count={e.pdfCount} />
                 <FullTextButton work={e.work} />
                 <button
                   className="bc-btn bc-btn-sm"
@@ -127,10 +162,11 @@ export function Library() {
                   {ownIds.data?.has(e.work.id!) ? "✓ Mi publicación" : "Es mía"}
                 </button>
                 <CiteButton work={e.work} />
+                <CitationNetworkButton work={e.work} />
                 <button className="bc-btn bc-btn-sm" aria-pressed={e.favorite} onClick={() => act(() => repo.setFavorite(e.work.id!, !e.favorite))} title="Favorito">
                   <Icon name="star" size={15} filled={e.favorite} /> {e.favorite ? "Favorito" : "Marcar favorito"}
                 </button>
-                <button className="bc-btn bc-btn-sm" onClick={() => setEditing(e)}>Etiquetas, notas y proyecto</button>
+                <button className="bc-btn bc-btn-sm" onClick={() => setEditing(e)}>Etiquetas y notas</button>
                 <button className="bc-btn bc-btn-sm bc-btn-danger" onClick={() => act(() => repo.removeFromLibrary(e.work.id!))}>Quitar</button>
               </>
             }
@@ -139,6 +175,18 @@ export function Library() {
       </div>
 
       {adding ? <ManualWorkForm onClose={() => setAdding(false)} /> : null}
+      {editingGroup ? (
+        <SmartGroupEditor
+          group={editingGroup === "new" ? null : editingGroup}
+          tags={tags.data?.map((t) => t.tag) ?? []}
+          collections={collections.data ?? []}
+          onClose={(id) => {
+            setEditingGroup(null);
+            if (id !== undefined) setGroupId(id ?? "");
+            refresh();
+          }}
+        />
+      ) : null}
       {importing ? <ImportDialog onClose={() => setImporting(false)} /> : null}
 
       {newCollection !== null ? (
@@ -165,7 +213,6 @@ export function Library() {
         <EntryEditor
           entry={editing}
           collections={collections.data ?? []}
-          projects={projects.data ?? []}
           onClose={() => {
             setEditing(null);
             refresh();
@@ -179,12 +226,10 @@ export function Library() {
 function EntryEditor({
   entry,
   collections,
-  projects,
   onClose,
 }: {
   entry: LibraryEntry;
   collections: { id: string; name: string }[];
-  projects: { id: string; name: string }[];
   onClose: () => void;
 }) {
   const { repo } = useApp();
@@ -241,25 +286,6 @@ function EntryEditor({
           <select className="bc-select" defaultValue="" onChange={async (e) => { if (e.target.value) { await repo.addToCollection(e.target.value, id); setMsg("Añadida a la colección."); } }}>
             <option value="">Elegir…</option>
             {collections.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="bc-label">Añadir a proyecto</label>
-          <select
-            className="bc-select"
-            defaultValue=""
-            onChange={async (e) => {
-              if (!e.target.value) return;
-              try {
-                await repo.addWorkToProject(e.target.value, id);
-                setMsg("Añadida al proyecto.");
-              } catch (err) {
-                setMsg(err instanceof Error ? err.message : String(err));
-              }
-            }}
-          >
-            <option value="">Elegir…</option>
-            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
       </div>

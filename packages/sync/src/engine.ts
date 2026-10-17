@@ -5,6 +5,8 @@ import {
   decodeResearcherCode,
   encodeResearcherCode,
   isWellFormed,
+  projectBoundTo,
+  projectIdFor,
   signEvent,
   verifyEventSignature,
   type EventBody,
@@ -13,6 +15,7 @@ import {
 } from "./events.ts";
 import { replayProject, workSyncKey, type ProjectState, type ReplayResult } from "./replay.ts";
 import { completeLines, type SyncTransport } from "./transport.ts";
+import { pushLibrary, pullLibrary, BIBLIO_PROJECT, type LibraryShareReport } from "./library.ts";
 
 export const BUNDLE_FORMAT = "biociencia-sync-1";
 
@@ -57,10 +60,12 @@ export class SyncEngine {
   async attach(): Promise<void> {
     await this.ensureKeys();
     this.repo.setProjectHook((projectId, change) => this.onLocalChange(projectId, change));
+    this.repo.setProjectIdFactory(async () => projectIdFor((await this.ensureKeys()).publicKey, this.clock()));
   }
 
   detach(): void {
     this.repo.setProjectHook(null);
+    this.repo.setProjectIdFactory(null);
   }
 
   /** Ejecuta las operaciones de una en una (evita mezclar una sincronización con un cambio local). */
@@ -147,13 +152,20 @@ export class SyncEngine {
   }
 
   /** Convierte un proyecto personal en compartido: crea su historial firmado desde el estado actual. */
-  async shareProject(projectId: string): Promise<void> {
+  /** Comparte el proyecto. Devuelve su identificador, que cambia si el proyecto se creó sin llave (versiones anteriores). */
+  async shareProject(projectIdIn: string): Promise<string> {
     return this.serial(async () => {
+      let projectId = projectIdIn;
       const me = await this.me();
       const p = await this.repo.getProject(projectId);
       if (!p) throw new Error("El proyecto no existe");
-      if (p.visibility === "shared") return;
+      if (p.visibility === "shared") return projectId;
       if ((await this.repo.myRole(projectId)) !== "admin") throw new Error("Solo un administrador puede compartir el proyecto");
+      const { publicKey } = await this.ensureKeys();
+      if (!projectBoundTo(projectId, publicKey)) {
+        projectId = projectIdFor(publicKey, this.clock());
+        await this.repo.rekeyProject(projectIdIn, projectId);
+      }
       const bodies: EventBody[] = [
         { type: "project.create", data: { name: p.name, description: p.description, objectives: p.objectives, ownerName: me.displayName } },
       ];
@@ -162,6 +174,7 @@ export class SyncEngine {
       await this.recordLocal(projectId, bodies);
       await this.repo.markProjectShared(projectId);
       await this.repo.addSyncLog({ direction: "local", count: bodies.length, status: "ok", detail: `Proyecto «${p.name}» compartido` });
+      return projectId;
     });
   }
 
@@ -272,12 +285,13 @@ export class SyncEngine {
           errors.push(`No se pudo escribir en la carpeta (${project}): ${(err as Error).message}`);
         }
       }
-      // 2. Leer los archivos de las demás computadoras
+      // 2. Leer los archivos de las demás computadoras (la carpeta «biblioteca» no son eventos de proyectos)
       const lines: string[] = [];
       let partial = 0;
       const peers = new Set<string>();
       for (const f of await t.list()) {
         if (f.device === me.deviceId) continue;
+        if (f.project === BIBLIO_PROJECT) continue;
         try {
           const r = completeLines(await t.read(f.project, f.device));
           lines.push(...r.lines);
@@ -297,6 +311,36 @@ export class SyncEngine {
         detail: summary({ ...rep, written, errors }, peers.size),
       });
       return { ...rep, written, errors };
+    });
+  }
+
+  // ---------------- Biblioteca compartida (misma carpeta, sin servidores) ----------------
+
+  /** Comparte las publicaciones de la biblioteca personal que aún no están en la carpeta. */
+  async shareLibrary(t: SyncTransport, opts: { includePdfs: boolean } = { includePdfs: true }): Promise<number> {
+    return this.serial(async () => {
+      const me = await this.me();
+      const k = await this.ensureKeys();
+      const n = await pushLibrary(this.repo, t, { deviceId: me.deviceId, name: me.displayName }, k, opts.includePdfs);
+      if (n) await this.repo.addSyncLog({ direction: "biblioteca-salida", count: n, status: "ok", detail: `${n} publicación(es) compartida(s) en «biblioteca/»` });
+      return n;
+    });
+  }
+
+  /** Importa las publicaciones compartidas por las otras computadoras (unión de bibliotecas). */
+  async pullLibrary(t: SyncTransport): Promise<LibraryShareReport> {
+    return this.serial(async () => {
+      const me = await this.me();
+      const r = await pullLibrary(this.repo, t, me.deviceId);
+      if (r.imported || r.errors.length) {
+        await this.repo.addSyncLog({
+          direction: "biblioteca-entrada",
+          count: r.imported,
+          status: r.errors.length ? "error" : "ok",
+          detail: `${r.imported} nueva(s) · ${r.merged} ya existente(s) · ${r.attachments} PDF nuevo(s)${r.errors.length ? ` · ${r.errors.join("; ")}` : ""}`,
+        });
+      }
+      return r;
     });
   }
 
